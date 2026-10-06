@@ -147,22 +147,23 @@ section[data-testid="stSidebar"] > div:first-child {
   border: 1px solid #d49a3e;
   border-radius: 11px;
   display: flex;
-  flex: 0 0 3rem;
+  flex: 0 0 3.4rem;
   height: 3rem;
   justify-content: center;
   overflow: hidden;
   position: relative;
-  width: 3rem;
+  width: 3.4rem;
 }
 [data-testid="stSidebar"] .brand-initials {
   color: var(--navy);
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 1.28rem;
+  font-size: .82rem;
   font-weight: 800;
-  letter-spacing: .02em;
+  letter-spacing: .15em;
   line-height: 1;
-  margin-top: -.35rem;
+  margin-top: -.2rem;
   position: relative;
+  white-space: nowrap;
   z-index: 2;
 }
 [data-testid="stSidebar"] .book-stack {
@@ -199,19 +200,19 @@ section[data-testid="stSidebar"] > div:first-child {
   transform: rotate(-3deg);
   width: 1.72rem;
 }
-[data-testid="stSidebar"] .brand-name {
+[data-testid="stSidebar"] .brand-meaning {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: clamp(1.45rem, 2vw, 1.7rem);
+  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
   font-weight: 700;
   letter-spacing: 0;
   line-height: 1.15;
-  white-space: nowrap;
 }
-[data-testid="stSidebar"] .brand-tagline {
+[data-testid="stSidebar"] .brand-subtag {
   color: var(--muted);
-  font-size: .72rem;
-  letter-spacing: .03em;
-  margin-top: .3rem;
+  font-size: .7rem;
+  letter-spacing: .08em;
+  margin-top: .28rem;
+  text-transform: uppercase;
 }
 [data-testid="stSidebar"] .sidebar-nav-heading {
   color: #718297;

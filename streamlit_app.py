@@ -13,8 +13,12 @@ from utils.scripture_retriever import (
 from utils.safety_checks import is_crisis_message, CRISIS_MESSAGE
 from utils.ai_reflection import generate_reflection
 
+APP_NAME = "MARK"
+APP_MEANING = "Messenger of Almighty Righteous King"
+APP_SUBTITLE = "A digital Bible"
+
 st.set_page_config(
-    page_title="Kabaybay AI",
+    page_title=APP_NAME,
     page_icon="📖",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -88,16 +92,18 @@ def move_library_verse(direction: int):
 
 st.sidebar.markdown(
     '<div class="sidebar-brand">'
-    '<div class="brand-mark" aria-label="Kabaybay Bible books logo">'
-    '<span class="brand-initials">KAI</span>'
+    '<div class="brand-mark" aria-label="MARK logo">'
+    '<span class="brand-initials">MARK</span>'
     '<span class="book-stack" aria-hidden="true">'
     '<span class="book-spine book-spine-back"></span>'
     '<span class="book-spine book-spine-middle"></span>'
     '<span class="book-spine book-spine-front"></span>'
     '</span>'
     '</div>'
-    '<div class="brand-copy"><div class="brand-name">Kabaybay AI</div>'
-    '<div class="brand-tagline">A softer place to begin again</div></div>'
+    '<div class="brand-copy">'
+    f'<div class="brand-meaning">{html.escape(APP_MEANING)}</div>'
+    f'<div class="brand-subtag">{html.escape(APP_SUBTITLE)}</div>'
+    '</div>'
     '</div>',
     unsafe_allow_html=True,
 )

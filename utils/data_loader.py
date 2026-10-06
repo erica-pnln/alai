@@ -1,4 +1,3 @@
-"""Loads data/bible_verses.csv without generating or sourcing Scripture."""
 from pathlib import Path
 import pandas as pd
 
