@@ -85,8 +85,16 @@ An enhanced version that makes the experience feel especially thoughtful and pol
 
 - **App:** Python and Streamlit
 - **Data:** pandas and a Bible verses CSV
-- **Charts:** Altair
 - **AI reflections:** Groq integration
+
+---
+
+## Pages
+
+- **Home** — a peaceful welcome, the Verse of the Day, and a Featured Bible Study.
+- **Bible Study** — pick any book, chapter, and verse range, then generate an overview, a reflection & prayer, or practical application.
+- **Bible Library** — browse by book/chapter/verse or search by reference or keyword.
+- **Vent Your Heart** — share what is on your heart and receive a Scripture-based reflection and prayer.
 
 ---
 

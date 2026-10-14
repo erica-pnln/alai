@@ -1,17 +1,20 @@
+import hashlib
 import html
+import inspect
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import cast
 
-import altair as alt
 import streamlit as st
+import pandas as pd
 
 from utils.data_loader import load_bible
 from utils.scripture_retriever import (
     get_books, get_chapters, get_verse_numbers, get_passage,
-    format_reference, search_reference, search_keyword, select_relevant_passage,
+    format_reference, search_reference, select_relevant_passage,
 )
 from utils.safety_checks import is_crisis_message, CRISIS_MESSAGE
-from utils.ai_reflection import generate_reflection
+from utils.ai_reflection import generate_reflection, generate_study, STUDY_MODES
 
 APP_NAME = "MARK"
 APP_MEANING = "Messenger of Almighty Righteous King"
@@ -21,19 +24,17 @@ st.set_page_config(
     page_title=APP_NAME,
     page_icon="📖",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
-PAGES = ["Home", "Bible Library", "Vent"]
+PAGES = ["Home", "Bible Study", "Bible Library", "Vent"]
 NAV_LABELS = {
     "Home": "🏠 Home",
+    "Bible Study": "📜 Bible Study",
     "Bible Library": "📖 Bible Library",
     "Vent": "💛 Vent Your Heart",
 }
 NAV_PAGES = {label: page for page, label in NAV_LABELS.items()}
-EMOTIONS = ["Hopeful", "Sad", "Worried", "Angry", "Lonely", "Grateful",
-            "Confused", "Disappointed", "Anxious", "Overwhelmed", "Afraid",
-            "Tired", "Other"]
 LANGUAGES = ["🇬🇧 English", "🇵🇭 Bisaya (Cebuano)", "🇵🇭 Tagalog"]
 PRIVACY_NOTICE = (
     "Your message is used to generate a temporary Bible-based reflection. "
@@ -45,6 +46,40 @@ PRIVACY_NOTICE = (
 css_file = Path(__file__).parent / "styles.css"
 if css_file.exists():
     st.markdown(f"<style>{css_file.read_text()}</style>", unsafe_allow_html=True)
+
+if "unsafe_allow_javascript" in inspect.signature(st.html).parameters:
+    st.html(
+        """<script>
+        (() => {
+          if (window.__markResponsiveSidebarClose) return;
+          window.__markResponsiveSidebarClose = true;
+          document.addEventListener("click", (event) => {
+            const target = event.target;
+            const navButton = target && target.closest
+              ? target.closest('section[data-testid="stSidebar"] button')
+              : null;
+            if (!navButton || window.innerWidth > 1024) return;
+            window.setTimeout(() => {
+              const sidebar = document.querySelector('section[data-testid="stSidebar"]');
+              const closeButton = sidebar
+                ? sidebar.querySelector('[data-testid="stSidebarCollapseButton"] button')
+                : null;
+              if (sidebar && sidebar.getAttribute("aria-expanded") === "true" && closeButton) {
+                closeButton.click();
+              }
+            }, 700);
+          });
+        })();
+        </script>""",
+        unsafe_allow_javascript=True,
+    )
+
+motion_file = Path(__file__).parent / "motion.js"
+if motion_file.exists():
+    st.markdown(
+        f"<script>{motion_file.read_text()}</script>",
+        unsafe_allow_html=True,
+    )
 
 
 @st.cache_data
@@ -64,6 +99,90 @@ if "navigation" not in st.session_state:
 def go(page: str):
     st.session_state["page"] = page
     st.session_state["navigation"] = NAV_LABELS[page]
+
+
+def _daily_seed(date: str) -> int:
+    """Stable integer seed from a date string so every user gets the same daily pick."""
+    digest = hashlib.sha256(date.encode("utf-8")).hexdigest()
+    return int(digest[:12], 16)
+
+
+def verse_of_the_day() -> tuple[pd.Series, str]:
+    """Return (verse row, date label). Same verse all day for everyone in UTC."""
+    if df.empty:
+        return None, ""
+    today = datetime.now(timezone.utc).date().isoformat()
+    row = df.iloc[_daily_seed(today) % len(df)]
+    return row, today
+
+
+# Curated featured passages, rotated daily. Each maps to a real book/chapter in the dataset.
+FEATURED_STUDIES = [
+    {"book": "Psalms", "chapter": 23, "start": 1, "end": 6,
+     "topic": "Trusting the Shepherd",
+     "description": "Reflect on God's tender care and what it means to follow a good Shepherd."},
+    {"book": "John", "chapter": 3, "start": 16, "end": 21,
+     "topic": "God's love for the world",
+     "description": "Consider the depth of God's love and the light that came into the world."},
+    {"book": "Philippians", "chapter": 4, "start": 4, "end": 9,
+     "topic": "Peace that guards the heart",
+     "description": "Learn to trade anxiety for prayer and receive a peace beyond understanding."},
+    {"book": "Romans", "chapter": 8, "start": 28, "end": 39,
+     "topic": "Nothing can separate us",
+     "description": "Rest in the promise that God works all things together for those who love Him."},
+    {"book": "Matthew", "chapter": 11, "start": 25, "end": 30,
+     "topic": "Rest for the weary",
+     "description": "Accept Jesus' invitation to lay down your burdens and find rest for your soul."},
+    {"book": "Proverbs", "chapter": 3, "start": 1, "end": 8,
+     "topic": "Trust with all your heart",
+     "description": "Discover the wisdom of leaning on God rather than your own understanding."},
+    {"book": "Isaiah", "chapter": 40, "start": 28, "end": 31,
+     "topic": "Strength for the waiting",
+     "description": "Find renewed strength when you wait upon the Lord and hope in Him."},
+]
+
+
+def featured_study() -> dict | None:
+    """Pick a featured study for today, verified to exist in the dataset."""
+    if df.empty:
+        return None
+    today = datetime.now(timezone.utc).date().isoformat()
+    order = list(FEATURED_STUDIES)
+    start = _daily_seed(today) % len(order)
+    rotated = order[start:] + order[:start]
+    for study in rotated:
+        verses = get_verse_numbers(df, study["book"], study["chapter"])
+        if not verses:
+            continue
+        start_v = min(study["start"], verses[-1])
+        end_v = min(study["end"], verses[-1])
+        passage = get_passage(df, study["book"], study["chapter"], start_v, end_v)
+        if passage.empty:
+            continue
+        return {**study, "start": start_v, "end": end_v}
+    return None
+
+
+def explore_in_study(book: str, chapter: int, start: int, end: int):
+    """Open the Bible Study page with a specific passage selected."""
+    st.session_state["study_book"] = book
+    st.session_state["study_chapter"] = chapter
+    st.session_state["study_start"] = start
+    st.session_state["study_end"] = end
+    st.session_state["study_mode"] = "overview"
+    st.session_state["study_result"] = None
+    st.session_state["study_result_key"] = None
+    go("Bible Study")
+
+
+def open_in_library(book: str, chapter: int, start: int, end: int):
+    """Open the Bible Library page with a specific passage selected."""
+    st.session_state["library_book"] = book
+    st.session_state["library_chapter"] = chapter
+    st.session_state["library_start"] = start
+    st.session_state["library_end"] = end
+    st.session_state["library_notice"] = ""
+    go("Bible Library")
 
 
 def move_library_verse(direction: int):
@@ -87,6 +206,53 @@ def move_library_verse(direction: int):
     target = verses[target_position]
     st.session_state["library_start"] = target
     st.session_state["library_end"] = target
+    st.session_state["library_notice"] = ""
+
+
+def move_library_chapter(direction: int):
+    """Move the Library to the previous/next chapter of the current book."""
+    book = st.session_state.get("library_book")
+    chapter = st.session_state.get("library_chapter")
+    if book is None or chapter is None:
+        return
+    chapters = get_chapters(df, book)
+    if not chapters:
+        return
+    current_position = chapters.index(chapter)
+    target_position = current_position + direction
+    if target_position < 0:
+        st.session_state["library_notice"] = "You are already at the first chapter of this book."
+        return
+    if target_position >= len(chapters):
+        st.session_state["library_notice"] = "You have reached the last chapter of this book."
+        return
+    target_chapter = chapters[target_position]
+    verses = get_verse_numbers(df, book, target_chapter)
+    if not verses:
+        return
+    st.session_state["library_chapter"] = target_chapter
+    st.session_state["library_start"] = verses[0]
+    st.session_state["library_end"] = verses[-1]
+    st.session_state["library_notice"] = ""
+
+
+def jump_to_reference():
+    """Set the Library passage from a typed reference like 'John 3:16'."""
+    query = st.session_state.get("library_jump", "")
+    ref = search_reference(df, query)
+    if ref is None:
+        st.session_state["library_notice"] = (
+            f"Couldn't find '{query.strip()}'. Try a format like 'John 3:16' or 'Genesis 1:1-5'."
+        )
+        return
+    book, chapter, start, end = ref
+    st.session_state["library_testament"] = (
+        df[df["book"] == book]["testament"].iloc[0]
+    )
+    st.session_state["library_book"] = book
+    st.session_state["library_chapter"] = chapter
+    st.session_state["library_start"] = start
+    st.session_state["library_end"] = end
     st.session_state["library_notice"] = ""
 
 
@@ -184,154 +350,87 @@ def render_page_title(title: str, icon: str = ""):
 
 # ---------------- Home ----------------
 def page_home():
-    render_page_title("What is on your heart today?")
-    st.write("Explore Scripture, reflect on God's Word, and take a moment to share what you are feeling.")
+    # Feature 1: Welcome / hero section
+    st.markdown(
+        '<section class="home-hero">'
+        '<div class="home-hero-kicker">MARK · A Digital Bible</div>'
+        '<h2 class="home-hero-heading">Grow in God&rsquo;s Word</h2>'
+        '<p class="home-hero-sub">Take a quiet moment to read, study, and reflect on Scripture '
+        'that meets you right where you are today.</p>'
+        '</section>',
+        unsafe_allow_html=True,
+    )
+    btn1, btn2, btn3 = st.columns(3)
+    btn1.button("📜 Start Bible Study", type="primary", width="stretch", on_click=go, args=("Bible Study",))
+    btn2.button("📖 Read the Bible", width="stretch", on_click=go, args=("Bible Library",))
+    btn3.button("💛 Vent Your Heart", width="stretch", on_click=go, args=("Vent",))
 
-    with st.container(border=True):
-        st.markdown('<div class="home-actions-heading">Choose your next step</div>', unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        col1.button("💛 Vent Your Heart", type="primary", width="stretch", on_click=go, args=("Vent",))
-        col2.button("📖 Read the Bible", width="stretch", on_click=go, args=("Bible Library",))
+    st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
 
-    st.subheader("Featured Scripture")
+    # Feature 2: Verse of the Day
+    st.markdown('<div class="home-section-heading">🕊️ Verse of the Day</div>', unsafe_allow_html=True)
     if not require_bible_data():
-        st.info("The featured passage will appear here once bible_verses.csv is added.")
+        st.info("A daily verse will appear here once a verified Bible CSV is added.")
     else:
-        book = df["book"].iloc[0]
-        chapter = get_chapters(df, book)[0]
-        verses = get_verse_numbers(df, book, chapter)
-        end = min(verses[0] + 4, verses[-1])
-        passage = get_passage(df, book, chapter, verses[0], end)
-        render_passage(passage, format_reference(book, chapter, verses[0], end), passage["testament"].iloc[0])
-        st.markdown(
-            '<div class="home-note">'
-            '<strong>📌 Reading preview</strong><br>'
-            'Placeholder rule for now: shows the first verses in the file. '
-            'A daily pick comes later.'
-            '</div>',
-            unsafe_allow_html=True,
-        )
-
-    with st.container(border=True):
-        st.markdown('<div class="home-stats-heading">📚 Library at a glance</div>', unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Verses loaded", f"{len(df):,}")
-        c2.metric("Books", df["book"].nunique())
-        c3.metric("Testaments", df["testament"].nunique())
-
-    if not is_placeholder:
-        with st.container(border=True):
+        row, _date = verse_of_the_day()
+        if row is None:
+            st.info("No verse is available yet. Add a verified Bible CSV to see the daily verse.")
+        else:
+            translation = str(row["translation"])
             st.markdown(
-                '<div class="insights-heading">📊 Bible Dataset Insights</div>'
-                '<div class="insights-caption">Explore how the verified Bible dataset is distributed.</div>',
+                '<section class="verse-of-day">'
+                f'<div class="verse-of-day-ref">{html.escape(str(row["reference"]))}</div>'
+                f'<div class="verse-of-day-text">{html.escape(str(row["text"]))}</div>'
+                f'<div class="verse-of-day-meta">{html.escape(translation)}</div>'
+                '</section>',
                 unsafe_allow_html=True,
             )
-
-            testament_options = ["All"] + list(df["testament"].drop_duplicates())
-            selected_testament = st.selectbox(
-                "Filter by testament",
-                testament_options,
-                key="insights_testament",
+            v1, v2 = st.columns([1, 1])
+            v1.button(
+                "📖 Read full passage",
+                width="stretch",
+                on_click=open_in_library,
+                args=(row["book"], int(row["chapter"]), int(row["verse"]), int(row["verse"])),
             )
-            filtered_df = df if selected_testament == "All" else df[
-                df["testament"] == selected_testament
-            ]
-
-            book_order = list(df["book"].drop_duplicates())
-            available_books = [book for book in book_order if book in set(filtered_df["book"])]
-            selected_books = st.multiselect(
-                "Choose Bible books (optional)",
-                available_books,
-                default=[],
-                key="insights_book_filter",
-                help="Leave this empty to show every book in the selected testament.",
+            v2.button(
+                "🔎 Explore this verse",
+                type="primary",
+                width="stretch",
+                on_click=explore_in_study,
+                args=(row["book"], int(row["chapter"]), int(row["verse"]), int(row["verse"])),
             )
 
-            chart_books = selected_books or available_books
-            chart_df = filtered_df[filtered_df["book"].isin(chart_books)]
-            verses_per_book = (
-                chart_df.groupby("book").size()
-                .reindex([book for book in book_order if book in chart_books], fill_value=0)
-                .rename("Verses")
-                .to_frame()
-            )
-            st.markdown('<div class="chart-heading">Verses per Bible book</div>', unsafe_allow_html=True)
-            st.caption(f"Showing {len(chart_books)} of {len(available_books)} available book(s).")
-            book_chart_height = max(420, 28 * len(verses_per_book) + 100)
-            book_chart_df = verses_per_book.reset_index().rename(
-                columns={"book": "Book", "Verses": "Verses"}
-            )
-            book_chart = alt.Chart(book_chart_df).mark_bar(
-                size=16, cornerRadiusEnd=4
-            ).encode(
-                x=alt.X(
-                    "Verses:Q",
-                    title="Verses",
-                    axis=alt.Axis(format=",.0f", labelFontSize=12, titleFontSize=13),
-                ),
-                y=alt.Y(
-                    "Book:N",
-                    title="Bible book",
-                    sort=[book for book in book_order if book in chart_books],
-                    axis=alt.Axis(
-                        labelFontSize=12,
-                        titleFontSize=13,
-                        labelLimit=150,
-                        labelOverlap=False,
-                    ),
-                    scale=alt.Scale(paddingInner=0.5, paddingOuter=0.25),
-                ),
-                color=alt.value("#1f77b4"),
-                tooltip=[
-                    alt.Tooltip("Book:N", title="Book"),
-                    alt.Tooltip("Verses:Q", title="Verses", format=",.0f"),
-                ],
-            ).properties(height=book_chart_height)
-            book_labels = book_chart.mark_text(
-                align="left",
-                baseline="middle",
-                dx=7,
-                fontSize=12,
-                color="#294552",
-                clip=False,
-            ).encode(text=alt.Text("Verses:Q", format=",.0f"))
-            book_chart = (book_chart + book_labels).properties(
-                padding={"left": 12, "right": 55, "top": 18, "bottom": 18}
-            ).configure_view(stroke=None)
-            st.altair_chart(book_chart, width="stretch")
+    st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
 
-            testament_values = list(df["testament"].dropna().drop_duplicates())
-            if testament_values:
-                testament_counts = (
-                    df.groupby("testament").size()
-                    .reindex(testament_values, fill_value=0)
-                    .rename("Verses")
-                    .to_frame()
-                )
-                st.markdown(
-                    '<div class="chart-heading">📜 Old Testament vs. New Testament</div>',
-                    unsafe_allow_html=True,
-                )
-                testament_chart_df = testament_counts.reset_index().rename(
-                    columns={"testament": "Testament", "Verses": "Verses"}
-                )
-                testament_chart = alt.Chart(testament_chart_df).mark_bar(
-                    size=34, cornerRadiusEnd=4
-                ).encode(
-                    x=alt.X("Verses:Q", title="Verses", axis=alt.Axis(format=",.0f")),
-                    y=alt.Y("Testament:N", title="Testament", sort=testament_values),
-                    color=alt.value("#1f77b4"),
-                    tooltip=[
-                        alt.Tooltip("Testament:N", title="Testament"),
-                        alt.Tooltip("Verses:Q", title="Verses", format=",.0f"),
-                    ],
-                ).properties(height=280)
-                testament_labels = testament_chart.mark_text(
-                    align="left", dx=5, color="#294552"
-                ).encode(text=alt.Text("Verses:Q", format=",.0f"))
-                st.altair_chart(testament_chart + testament_labels, width="stretch")
-            else:
-                st.info("Testament information is not available in this dataset.")
+    # Feature 3: Featured Bible Study
+    st.markdown('<div class="home-section-heading">📜 Featured Bible Study</div>', unsafe_allow_html=True)
+    if not require_bible_data():
+        st.info("A featured study will appear here once a verified Bible CSV is added.")
+    else:
+        study = featured_study()
+        if study is None:
+            st.info("No featured study is available right now. Please try the Bible Study page.")
+        else:
+            passage = get_passage(df, study["book"], study["chapter"], study["start"], study["end"])
+            st.markdown(
+                '<section class="featured-study">'
+                f'<div class="featured-study-topic">{html.escape(study["topic"])}</div>'
+                f'<div class="featured-study-desc">{html.escape(study["description"])}</div>'
+                '</section>',
+                unsafe_allow_html=True,
+            )
+            render_passage(
+                passage,
+                format_reference(study["book"], study["chapter"], study["start"], study["end"]),
+                passage["testament"].iloc[0],
+            )
+            st.button(
+                "✨ Study this passage",
+                type="primary",
+                width="stretch",
+                on_click=explore_in_study,
+                args=(study["book"], study["chapter"], study["start"], study["end"]),
+            )
 
 
 # ---------------- Bible Library ----------------
@@ -340,15 +439,48 @@ def page_library():
     show_data_warning()
     if not require_bible_data():
         return
-    tab_browse, tab_search = st.tabs(["Browse", "Search"])
+    # Single browsing area — no tabs.
+    with st.container():
+        # Fast path: type a reference and jump straight to it.
+        st.markdown(
+            '<div class="jump-help">'
+            '<div class="jump-help-title">How to search &mdash; try these in order:</div>'
+            '<div class="jump-help-step"><span class="jump-help-badge">1</span>'
+            '<span>Read a whole chapter &mdash; <code>Psalms 23</code></span></div>'
+            '<div class="jump-help-step"><span class="jump-help-badge">2</span>'
+            '<span>Go to one verse &mdash; <code>John 3:16</code></span></div>'
+            '<div class="jump-help-step"><span class="jump-help-badge">3</span>'
+            '<span>Read a range of verses &mdash; <code>Genesis 1:1-5</code></span></div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        # Keep the quick-reference search centered without spacer columns on small screens.
+        with st.container(key="library-jump"):
+            st.markdown('<div class="library-nav-label">⚡ Jump to a reference</div>', unsafe_allow_html=True)
+            jump_inner_col, jump_btn = st.columns([3, 1])
+            jump_query = jump_inner_col.text_input(
+                "Go to",
+                placeholder="e.g. John 3:16, Psalms 23, or Genesis 1:1-5",
+                key="library_jump",
+                label_visibility="collapsed",
+            )
+            jump_btn.button(
+                "Go",
+                type="primary",
+                width="stretch",
+                on_click=jump_to_reference,
+            )
 
-    with tab_browse:
+        st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
+
+        # Testament filters the Book list; all passage selectors share one desktop row.
+        with st.container(key="library-passage-selectors"):
+            testament_col, book_col, chapter_col, start_col, end_col = st.columns(
+                [1, 1.3, .8, 1, 1]
+            )
         testaments = list(df["testament"].drop_duplicates())
         if st.session_state.get("library_testament") not in testaments:
             st.session_state["library_testament"] = testaments[0]
-        testament_col, book_col, chapter_col, start_col, end_col = st.columns(
-            [1.15, 1.5, .85, 1.1, 1.1]
-        )
         testament = cast(str, testament_col.selectbox(
             "📖 Testament", testaments, key="library_testament"
         ))
@@ -383,44 +515,38 @@ def page_library():
 
         passage = get_passage(df, book, chapter, start, end)
         render_passage(passage, format_reference(book, chapter, start, end), testament)
+
+        # Reading flow: prev/next verse AND prev/next chapter
         st.markdown('<div class="library-nav-label">📚 Continue reading</div>', unsafe_allow_html=True)
-        previous_col, next_col = st.columns(2)
-        previous_col.button(
-            "⬅️ Previous Verse",
+        c1, c2, c3, c4 = st.columns(4)
+        c1.button(
+            "⏮️ Prev chapter",
+            width="stretch",
+            on_click=move_library_chapter,
+            args=(-1,),
+        )
+        c2.button(
+            "◀️ Prev verse",
             disabled=verses.index(start) == 0,
-            use_container_width=True,
+            width="stretch",
             on_click=move_library_verse,
             args=(-1,),
         )
-        next_col.button(
-            "➡️ Next Verse",
-            type="primary",
-            use_container_width=True,
+        c3.button(
+            "▶️ Next verse",
+            disabled=verses.index(start) >= len(verses) - 1,
+            width="stretch",
             on_click=move_library_verse,
+            args=(1,),
+        )
+        c4.button(
+            "⏭️ Next chapter",
+            width="stretch",
+            on_click=move_library_chapter,
             args=(1,),
         )
         if st.session_state.get("library_notice"):
             st.info(st.session_state["library_notice"])
-
-    with tab_search:
-        st.write("Search by reference (for example `John 3:16-18`) or by a keyword.")
-        query = st.text_input("Reference or keyword", placeholder="e.g. John 3:16 or peace")
-        if query.strip():
-            ref = search_reference(df, query)
-            if ref:
-                book, chapter, start, end = ref
-                passage = get_passage(df, book, chapter, start, end)
-                if passage.empty:
-                    st.warning("That verse range was not found in the dataset.")
-                else:
-                    render_passage(passage, format_reference(book, chapter, start, end), passage["testament"].iloc[0])
-            else:
-                hits = search_keyword(df, query)
-                if hits.empty:
-                    st.warning("No matching reference or keyword found. Try a different search.")
-                else:
-                    st.success(f"Showing {len(hits)} matching verse(s) (limit 50).")
-                    st.dataframe(hits[["reference", "text"]], use_container_width=True, hide_index=True)
 
 
 # ---------------- Vent ----------------
@@ -430,8 +556,7 @@ def page_vent():
 
     with st.container(border=True):
         st.write("A quiet place to share what is on your heart and receive a gentle Scripture-based reflection.")
-        emotion_col, language_col, passage_col = st.columns(3)
-        emotion = emotion_col.selectbox("😊 How are you feeling?", EMOTIONS)
+        language_col, passage_col = st.columns(2)
         language = language_col.selectbox("🌐 Preferred Language", LANGUAGES)
         preference = passage_col.selectbox(
             "📖 Passage length (optional)",
@@ -446,7 +571,7 @@ def page_vent():
         guidance_clicked = button_center.button(
             "🙏 I Need His Guidance",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         )
 
     if guidance_clicked:
@@ -459,16 +584,15 @@ def page_vent():
         else:
             with st.spinner("Preparing your Scripture reflection..."):
                 passage, passage_reference = select_relevant_passage(
-                    df, emotion, message, preference
+                    df, message, preference
                 )
                 result = generate_reflection(
-                    emotion, message, passage, passage_reference, language
+                    message, passage, passage_reference, language
                 )
             if not result.ok:
                 st.warning(result.message)
             else:
                 st.session_state["vent"] = {
-                    "emotion": emotion,
                     "language": language,
                     "message": message,
                     "preference": preference,
@@ -476,8 +600,8 @@ def page_vent():
                 }
                 st.success("Your reflection is ready.")
                 st.markdown(
-                    f'<div class="emotion-summary"><strong>Reflection focus:</strong> '
-                    f'{html.escape(emotion)} · <span>{html.escape(passage_reference)}</span></div>',
+                    f'<div class="passage-summary"><strong>Selected passage:</strong> '
+                    f'<span>{html.escape(passage_reference)}</span></div>',
                     unsafe_allow_html=True,
                 )
                 render_passage(passage, passage_reference, passage["testament"].iloc[0])
@@ -494,4 +618,123 @@ def page_vent():
                     render_result_card("Prayer", "🙏", result.prayer, "prayer")
 
 
-{"Home": page_home, "Bible Library": page_library, "Vent": page_vent}[st.session_state["page"]]()
+# ---------------- Bible Study ----------------
+def _study_state_key() -> tuple:
+    """Identify the exact passage + mode the current study result belongs to."""
+    return (
+        st.session_state.get("study_book"),
+        st.session_state.get("study_chapter"),
+        st.session_state.get("study_start"),
+        st.session_state.get("study_end"),
+        st.session_state.get("study_mode"),
+    )
+
+
+def _reset_study_on_change():
+    """Clear a cached study when the reader changes the passage, mode, or language."""
+    if st.session_state.get("study_result_key") != _study_state_key():
+        st.session_state["study_result"] = None
+        st.session_state["study_result_key"] = None
+
+
+def render_study_sections(sections):
+    """Render generated study sections separately from original Scripture."""
+    for heading, body in sections:
+        render_result_card(heading, "", body, "study")
+
+
+def page_bible_study():
+    render_page_title("Bible Study", "📜")
+    show_data_warning()
+    if not require_bible_data():
+        return
+
+    # Keep all passage selectors on one desktop row and group them responsively.
+    with st.container(key="study-passage-selectors"):
+        testament_col, book_col, chapter_col, start_col, end_col = st.columns(
+            [1, 1.3, .8, 1, 1]
+        )
+    testaments = list(df["testament"].drop_duplicates())
+    if st.session_state.get("study_testament") not in testaments:
+        st.session_state["study_testament"] = testaments[0]
+    testament = cast(str, testament_col.selectbox(
+        "📖 Testament", testaments, key="study_testament"
+    ))
+
+    books = get_books(df, testament)
+    if st.session_state.get("study_book") not in books:
+        st.session_state["study_book"] = books[0]
+    book = cast(str, book_col.selectbox("📚 Book", books, key="study_book"))
+
+    chapters = get_chapters(df, book)
+    if st.session_state.get("study_chapter") not in chapters:
+        st.session_state["study_chapter"] = chapters[0]
+    chapter = cast(int, chapter_col.selectbox("🔢 Chapter", chapters, key="study_chapter"))
+
+    verses = get_verse_numbers(df, book, chapter)
+    if st.session_state.get("study_start") not in verses:
+        st.session_state["study_start"] = verses[0]
+    start = cast(int, start_col.selectbox("🔽 From Verse", verses, key="study_start"))
+
+    end_options = [v for v in verses if v >= start]
+    if st.session_state.get("study_end") not in end_options:
+        st.session_state["study_end"] = end_options[-1]
+    end = cast(int, end_col.selectbox("🔽 To Verse", end_options, key="study_end"))
+
+    # Studies are generated in English (language selector removed).
+    language = "🇬🇧 English"
+
+    reference = format_reference(book, chapter, start, end)
+    passage = get_passage(df, book, chapter, start, end)
+
+    # Always show the original, dataset-backed Scripture first.
+    render_passage(passage, reference, testament)
+
+    st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="home-section-heading">✨ Study this passage</div>', unsafe_allow_html=True)
+
+    mode_labels = [STUDY_MODES[mode]["label"] for mode in STUDY_MODES]
+    mode_keys = list(STUDY_MODES.keys())
+    if st.session_state.get("study_mode") not in mode_keys:
+        st.session_state["study_mode"] = "overview"
+    selected_label = st.segmented_control(
+        "Study mode",
+        mode_labels,
+        key="study_mode_control",
+        default=STUDY_MODES[st.session_state["study_mode"]]["label"],
+    )
+    if selected_label in mode_labels:
+        st.session_state["study_mode"] = mode_keys[mode_labels.index(selected_label)]
+
+    description = STUDY_MODES[st.session_state["study_mode"]]["description"]
+    st.caption(description)
+
+    # Invalidate any cached study that no longer matches the current selection.
+    _reset_study_on_change()
+
+    generate_clicked = st.button(
+        "✨ Generate study",
+        type="primary",
+        width="stretch",
+    )
+
+    if generate_clicked:
+        with st.spinner("Preparing your Bible study..."):
+            result = generate_study(passage, reference, st.session_state["study_mode"], language)
+        st.session_state["study_result"] = result
+        st.session_state["study_result_key"] = _study_state_key()
+
+    result = st.session_state.get("study_result")
+    if result is not None and st.session_state.get("study_result_key") == _study_state_key():
+        if not result.ok:
+            st.warning(result.message)
+        else:
+            st.markdown(
+                '<div class="card-label">AI-generated study, not original Scripture or a direct '
+                'message from God.</div>',
+                unsafe_allow_html=True,
+            )
+            render_study_sections(result.sections)
+
+
+{"Home": page_home, "Bible Study": page_bible_study, "Bible Library": page_library, "Vent": page_vent}[st.session_state["page"]]()

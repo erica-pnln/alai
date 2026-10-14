@@ -30,7 +30,6 @@ def is_complete_passage(passage_df: pd.DataFrame, start: int, end: int) -> bool:
 
 def select_relevant_passage(
     df: pd.DataFrame,
-    emotion: str,
     message: str,
     preference: str,
 ) -> tuple[pd.DataFrame, str]:
@@ -43,7 +42,7 @@ def select_relevant_passage(
         "Complete passage": 6,
         "Let the system choose": 4,
     }.get(preference, 4)
-    terms = [emotion.lower()] + re.findall(r"[a-z]{4,}", message.lower())
+    terms = re.findall(r"[a-z]{4,}", message.lower())
     terms = list(dict.fromkeys(terms))
     searchable = df["text"].astype(str).str.lower()
     scores = pd.Series(0, index=df.index, dtype="int64")
