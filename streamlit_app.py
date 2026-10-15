@@ -1311,25 +1311,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-pwa_manifest = {
-    "id": "/",
-    "name": "Alai - AI-powered Digital Bible",
-    "short_name": "Alai",
-    "start_url": "/",
-    "scope": "/",
-    "display": "standalone",
-    "background_color": "#14251D",
-    "theme_color": "#14251D",
-    "icons": [
-        {
-            "src": f"/app/static/alai_icon_{size}.png",
-            "sizes": f"{size}x{size}",
-            "type": "image/png",
-            "purpose": "any",
-        }
-        for size in (192, 512)
-    ],
-}
 st.html(
     f"""<style>
       #alai-install-button {{
@@ -1403,19 +1384,15 @@ st.html(
         if (window.__alaiPwaUiInitialized) return;
         window.__alaiPwaUiInitialized = true;
 
-        const manifest = {json.dumps(pwa_manifest)};
-        manifest.id = window.location.origin + "/";
-        manifest.start_url = window.location.origin + "/";
-        manifest.scope = window.location.origin + "/";
-        const manifestBlob = new Blob([JSON.stringify(manifest)], {{ type: "application/manifest+json" }});
         const manifestLink = document.createElement("link");
         manifestLink.rel = "manifest";
-        manifestLink.href = URL.createObjectURL(manifestBlob);
+        manifestLink.type = "application/manifest+json";
+        manifestLink.href = window.location.origin + "/app/static/manifest.webmanifest";
         document.head.appendChild(manifestLink);
 
         const appleIcon = document.createElement("link");
         appleIcon.rel = "apple-touch-icon";
-        appleIcon.href = manifest.icons[1].src;
+        appleIcon.href = window.location.origin + "/app/static/alai_icon_512.png";
         appleIcon.sizes = "512x512";
         document.head.appendChild(appleIcon);
         const appleCapable = document.createElement("meta");
