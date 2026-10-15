@@ -25,6 +25,12 @@ _logo_jpg = Path(__file__).parent / "logo" / "logo.jpg"
 APP_LOGO_DATA_URI = (
     "data:image/jpeg;base64," + base64.b64encode(_logo_jpg.read_bytes()).decode("ascii")
 )
+_pwa_icons = {}
+for _icon_size in (192, 512):
+    _icon_path = Path(__file__).parent / "static" / f"alai_icon_{_icon_size}.png"
+    _pwa_icons[_icon_size] = (
+        "data:image/png;base64," + base64.b64encode(_icon_path.read_bytes()).decode("ascii")
+    )
 
 st.set_page_config(
     page_title=APP_NAME,
@@ -1310,6 +1316,160 @@ st.markdown(
     '<div class="app-footer-title">Alai</div>'
     '</footer>',
     unsafe_allow_html=True,
+)
+
+pwa_manifest = {
+    "id": "/",
+    "name": "Alai - AI-powered Digital Bible",
+    "short_name": "Alai",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#14251D",
+    "theme_color": "#14251D",
+    "icons": [
+        {
+            "src": _pwa_icons[size],
+            "sizes": f"{size}x{size}",
+            "type": "image/png",
+            "purpose": "any",
+        }
+        for size in (192, 512)
+    ],
+}
+st.html(
+    f"""<style>
+      #alai-install-button {{
+        background: #c5a15b;
+        border: 1px solid #e3c77f;
+        border-radius: 10px;
+        color: #14251d;
+        cursor: pointer;
+        display: block;
+        font: 700 .95rem 'DM Sans', sans-serif;
+        margin: .1rem .25rem .9rem;
+        min-height: 44px;
+        padding: .65rem .9rem;
+        width: calc(100% - .5rem);
+      }}
+      #alai-install-button:hover {{ background: #dfbd70; }}
+      #alai-install-help {{
+        align-items: center;
+        background: rgba(5, 12, 9, .72);
+        display: flex;
+        inset: 0;
+        justify-content: center;
+        padding: 1rem;
+        position: fixed;
+        z-index: 2147482500;
+      }}
+      #alai-install-help[hidden] {{ display: none; }}
+      #alai-install-help-card {{
+        background: #1a3024;
+        border: 1px solid #c5a15b;
+        border-radius: 16px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+        color: #f5f0e5;
+        max-width: 26rem;
+        padding: 1.2rem 1.35rem;
+        width: 100%;
+      }}
+      #alai-install-help-card h2 {{ color: #f7d58f; font-size: 1.2rem; margin: 0 0 .6rem; }}
+      #alai-install-help-card p {{ line-height: 1.55; margin: 0 0 1rem; }}
+      #alai-install-help-close {{
+        background: #c5a15b;
+        border: 0;
+        border-radius: 9px;
+        color: #14251d;
+        cursor: pointer;
+        font: 700 .95rem 'DM Sans', sans-serif;
+        min-height: 42px;
+        padding: .55rem 1rem;
+      }}
+    </style>
+    <div id="alai-install-help" role="presentation" hidden>
+      <section id="alai-install-help-card" role="dialog" aria-modal="true" aria-labelledby="alai-install-help-title">
+        <h2 id="alai-install-help-title">Install Alai</h2>
+        <p id="alai-install-help-copy"></p>
+        <button id="alai-install-help-close" type="button">Got it</button>
+      </section>
+    </div>
+    <script>
+      (() => {{
+        if (window.__alaiPwaUiInitialized) return;
+        window.__alaiPwaUiInitialized = true;
+
+        const manifest = {json.dumps(pwa_manifest)};
+        manifest.id = window.location.origin + "/";
+        manifest.start_url = window.location.origin + "/";
+        manifest.scope = window.location.origin + "/";
+        const manifestBlob = new Blob([JSON.stringify(manifest)], {{ type: "application/manifest+json" }});
+        const manifestLink = document.createElement("link");
+        manifestLink.rel = "manifest";
+        manifestLink.href = URL.createObjectURL(manifestBlob);
+        document.head.appendChild(manifestLink);
+
+        const appleIcon = document.createElement("link");
+        appleIcon.rel = "apple-touch-icon";
+        appleIcon.href = manifest.icons[1].src;
+        document.head.appendChild(appleIcon);
+        const appleCapable = document.createElement("meta");
+        appleCapable.name = "apple-mobile-web-app-capable";
+        appleCapable.content = "yes";
+        document.head.appendChild(appleCapable);
+
+        const brand = document.querySelector("section[data-testid='stSidebar'] .sidebar-brand");
+        const help = document.getElementById("alai-install-help");
+        const helpCopy = document.getElementById("alai-install-help-copy");
+        const closeHelp = document.getElementById("alai-install-help-close");
+        if (!brand || !help || !helpCopy || !closeHelp) return;
+
+        const installButton = document.createElement("button");
+        installButton.id = "alai-install-button";
+        installButton.type = "button";
+        installButton.textContent = "Install Alai";
+        installButton.setAttribute("aria-label", "Install Alai on this device");
+        brand.insertAdjacentElement("afterend", installButton);
+
+        const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+          || window.navigator.standalone === true;
+        if (isStandalone) installButton.hidden = true;
+
+        let installPrompt = null;
+        window.addEventListener("beforeinstallprompt", (event) => {{
+          event.preventDefault();
+          installPrompt = event;
+        }});
+        window.addEventListener("appinstalled", () => {{ installButton.hidden = true; }});
+
+        const userAgent = window.navigator.userAgent || "";
+        const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+        const isFacebook = /FBAN|FBAV|FB_IAB|Messenger/i.test(userAgent);
+        installButton.addEventListener("click", async () => {{
+          if (installPrompt) {{
+            installPrompt.prompt();
+            const choice = await installPrompt.userChoice;
+            installPrompt = null;
+            if (choice && choice.outcome === "accepted") installButton.hidden = true;
+            return;
+          }}
+
+          if (isIOS) {{
+            helpCopy.textContent = "In Safari, tap Share, then choose ‘Add to Home Screen’.";
+          }} else if (isFacebook) {{
+            helpCopy.textContent = "Open Alai in Chrome or your device’s browser first, then use its menu and choose ‘Install app’ or ‘Add to Home screen’.";
+          }} else if (/Android/i.test(userAgent)) {{
+            helpCopy.textContent = "Open your browser menu (⋮) and choose ‘Install app’ or ‘Add to Home screen’.";
+          }} else {{
+            helpCopy.textContent = "In your browser menu or address bar, choose ‘Install Alai’ or ‘Install app’.";
+          }}
+          help.hidden = false;
+        }});
+        closeHelp.addEventListener("click", () => {{ help.hidden = true; }});
+        help.addEventListener("click", (event) => {{ if (event.target === help) help.hidden = true; }});
+      }})();
+    </script>""",
+    unsafe_allow_javascript=True,
 )
 
 st.html(
