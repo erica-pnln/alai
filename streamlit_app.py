@@ -1347,32 +1347,43 @@ st.html(
         cursor: pointer;
         display: block;
         font: 700 .95rem 'DM Sans', sans-serif;
-        margin: .1rem .25rem .9rem;
         min-height: 44px;
-        padding: .65rem .9rem;
-        width: calc(100% - .5rem);
-      }}
-      #alai-install-button:hover {{ background: #dfbd70; }}
-      #alai-install-help {{
-        align-items: center;
-        background: rgba(5, 12, 9, .72);
-        display: flex;
-        inset: 0;
-        justify-content: center;
-        padding: 1rem;
+        padding: .65rem 1rem;
         position: fixed;
-        z-index: 2147482500;
+        right: max(18px, env(safe-area-inset-right));
+        bottom: max(18px, env(safe-area-inset-bottom));
+        width: auto;
+        z-index: 2147482000;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
+        transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+      }}
+      #alai-install-button:hover {{
+        background: #dfbd70;
+        box-shadow: 0 10px 26px rgba(0, 0, 0, .42);
+        transform: translateY(-2px);
+      }}
+      #alai-install-button:focus-visible {{ outline: 3px solid #f7d58f; outline-offset: 3px; }}
+      #alai-install-help {{
+        background: transparent;
+        bottom: calc(max(18px, env(safe-area-inset-bottom)) + 58px);
+        display: block;
+        padding: 0;
+        position: fixed;
+        right: max(18px, env(safe-area-inset-right));
+        width: min(22rem, calc(100vw - 32px));
+        z-index: 2147482001;
+        pointer-events: none;
       }}
       #alai-install-help[hidden] {{ display: none; }}
       #alai-install-help-card {{
         background: #1a3024;
         border: 1px solid #c5a15b;
-        border-radius: 16px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, .45);
+        border-radius: 14px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, .4);
         color: #f5f0e5;
-        max-width: 26rem;
-        padding: 1.2rem 1.35rem;
+        padding: 1rem 1.1rem;
         width: 100%;
+        pointer-events: auto;
       }}
       #alai-install-help-card h2 {{ color: #f7d58f; font-size: 1.2rem; margin: 0 0 .6rem; }}
       #alai-install-help-card p {{ line-height: 1.55; margin: 0 0 1rem; }}
@@ -1418,18 +1429,17 @@ st.html(
         appleCapable.content = "yes";
         document.head.appendChild(appleCapable);
 
-        const brand = document.querySelector("section[data-testid='stSidebar'] .sidebar-brand");
         const help = document.getElementById("alai-install-help");
         const helpCopy = document.getElementById("alai-install-help-copy");
         const closeHelp = document.getElementById("alai-install-help-close");
-        if (!brand || !help || !helpCopy || !closeHelp) return;
+        if (!help || !helpCopy || !closeHelp) return;
 
         const installButton = document.createElement("button");
         installButton.id = "alai-install-button";
         installButton.type = "button";
         installButton.textContent = "Install Alai";
         installButton.setAttribute("aria-label", "Install Alai on this device");
-        brand.insertAdjacentElement("afterend", installButton);
+        document.body.appendChild(installButton);
 
         const isStandalone = window.matchMedia("(display-mode: standalone)").matches
           || window.navigator.standalone === true;
@@ -1466,7 +1476,9 @@ st.html(
           help.hidden = false;
         }});
         closeHelp.addEventListener("click", () => {{ help.hidden = true; }});
-        help.addEventListener("click", (event) => {{ if (event.target === help) help.hidden = true; }});
+        document.addEventListener("keydown", (event) => {{
+          if (event.key === "Escape") help.hidden = true;
+        }});
       }})();
     </script>""",
     unsafe_allow_javascript=True,
