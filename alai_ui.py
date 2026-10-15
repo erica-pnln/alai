@@ -1314,71 +1314,67 @@ st.markdown(
 st.html(
     f"""<style>
       #alai-install-button {{
-        background: #c5a15b;
-        border: 1px solid #e3c77f;
-        border-radius: 10px;
-        color: #14251d;
-        cursor: pointer;
-        display: block;
-        font: 700 .95rem 'DM Sans', sans-serif;
-        min-height: 44px;
-        padding: .65rem 1rem;
-        position: fixed;
-        right: max(18px, env(safe-area-inset-right));
-        top: 50%;
-        width: auto;
-        z-index: 2147482000;
-        box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
+        background: #c5a15b; border: 1px solid #e3c77f; border-radius: 10px;
+        color: #14251d; cursor: pointer; display: block;
+        font: 700 .95rem 'DM Sans', sans-serif; min-height: 44px;
+        padding: .65rem 1rem; position: fixed;
+        right: max(18px, env(safe-area-inset-right)); top: 50%; width: auto;
+        z-index: 2147482000; box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
         transform: translateY(-50%);
         transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
       }}
       #alai-install-button:hover {{
-        background: #dfbd70;
-        box-shadow: 0 10px 26px rgba(0, 0, 0, .42);
+        background: #dfbd70; box-shadow: 0 10px 26px rgba(0, 0, 0, .42);
         transform: translateY(calc(-50% - 2px));
       }}
       #alai-install-button:focus-visible {{ outline: 3px solid #f7d58f; outline-offset: 3px; }}
-      #alai-install-help {{
-        background: transparent;
-        top: 50%;
-        display: block;
-        padding: 0;
-        position: fixed;
-        right: max(18px, env(safe-area-inset-right));
-        width: min(22rem, calc(100vw - 32px));
-        z-index: 2147482001;
-        transform: translateY(calc(-100% - 58px));
-        pointer-events: none;
+      #alai-install-overlay {{
+        align-items: center; background: rgba(7, 15, 11, .72); display: flex;
+        inset: 0; justify-content: center; opacity: 0;
+        padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+        position: fixed; transition: opacity .24s ease; z-index: 2147482001;
       }}
-      #alai-install-help[hidden] {{ display: none; }}
-      #alai-install-help-card {{
-        background: #1a3024;
-        border: 1px solid #c5a15b;
-        border-radius: 14px;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, .4);
-        color: #f5f0e5;
-        padding: 1rem 1.1rem;
-        width: 100%;
-        pointer-events: auto;
+      #alai-install-overlay[hidden] {{ display: none; }}
+      #alai-install-overlay.is-visible {{ opacity: 1; }}
+      #alai-install-card {{
+        background: #1a3024; border: 1px solid #c5a15b; border-radius: 20px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, .48); box-sizing: border-box;
+        color: #f5f0e5; max-width: 25rem; padding: 1.5rem; text-align: center;
+        transform: scale(.96) translateY(8px); transition: transform .24s ease; width: 100%;
       }}
-      #alai-install-help-card h2 {{ color: #f7d58f; font-size: 1.2rem; margin: 0 0 .6rem; }}
-      #alai-install-help-card p {{ line-height: 1.55; margin: 0 0 1rem; }}
-      #alai-install-help-close {{
-        background: #c5a15b;
-        border: 0;
-        border-radius: 9px;
-        color: #14251d;
-        cursor: pointer;
-        font: 700 .95rem 'DM Sans', sans-serif;
-        min-height: 42px;
-        padding: .55rem 1rem;
+      #alai-install-overlay.is-visible #alai-install-card {{ transform: scale(1) translateY(0); }}
+      #alai-install-logo {{
+        border: 1px solid rgba(226, 190, 111, .8); border-radius: 50%;
+        display: block; height: 76px; margin: 0 auto .7rem; object-fit: cover; width: 76px;
       }}
+      #alai-install-title {{ color: #f7d58f; font-size: 1.55rem; margin: 0 0 .35rem; }}
+      #alai-install-description {{ line-height: 1.55; margin: 0 0 .75rem; }}
+      #alai-install-status {{ color: #d6c8a8; font-size: .92rem; line-height: 1.45; min-height: 2.7em; }}
+      #alai-install-actions {{ display: flex; gap: .7rem; justify-content: center; margin-top: 1.1rem; }}
+      #alai-install-actions button {{
+        border-radius: 10px; cursor: pointer; font: 700 .95rem 'DM Sans', sans-serif;
+        min-height: 44px; padding: .65rem 1rem;
+      }}
+      #alai-install-confirm {{ background: #c5a15b; border: 1px solid #e3c77f; color: #14251d; }}
+      #alai-install-cancel {{ background: transparent; border: 1px solid #58705f; color: #f5f0e5; }}
+      #alai-install-actions button:focus-visible {{ outline: 3px solid #f7d58f; outline-offset: 3px; }}
+      @media (max-width: 480px) {{
+        #alai-install-card {{ border-radius: 17px; padding: 1.25rem 1rem; }}
+        #alai-install-actions {{ flex-direction: column; }}
+        #alai-install-actions button {{ width: 100%; }}
+      }}
+      @media (prefers-reduced-motion: reduce) {{ #alai-install-overlay, #alai-install-card {{ transition: none; }} }}
     </style>
-    <div id="alai-install-help" role="presentation" hidden>
-      <section id="alai-install-help-card" role="dialog" aria-modal="true" aria-labelledby="alai-install-help-title">
-        <h2 id="alai-install-help-title">Install Alai</h2>
-        <p id="alai-install-help-copy"></p>
-        <button id="alai-install-help-close" type="button">Got it</button>
+    <div id="alai-install-overlay" hidden>
+      <section id="alai-install-card" role="dialog" aria-modal="true" aria-labelledby="alai-install-title">
+        <img id="alai-install-logo" src="/app/static/alai_icon_192.png" alt="Alai logo">
+        <h2 id="alai-install-title">Install Alai</h2>
+        <p id="alai-install-description">AI-powered Digital Bible</p>
+        <p id="alai-install-status" aria-live="polite">Add Alai to your home screen for quick access to Scripture and reflection.</p>
+        <div id="alai-install-actions">
+          <button id="alai-install-confirm" type="button">Add to Home Screen</button>
+          <button id="alai-install-cancel" type="button">Cancel</button>
+        </div>
       </section>
     </div>
     <script>
@@ -1408,10 +1404,11 @@ st.html(
         appleCapable.content = "yes";
         document.head.appendChild(appleCapable);
 
-        const help = document.getElementById("alai-install-help");
-        const helpCopy = document.getElementById("alai-install-help-copy");
-        const closeHelp = document.getElementById("alai-install-help-close");
-        if (!help || !helpCopy || !closeHelp) return;
+        const overlay = document.getElementById("alai-install-overlay");
+        const status = document.getElementById("alai-install-status");
+        const confirmButton = document.getElementById("alai-install-confirm");
+        const cancelButton = document.getElementById("alai-install-cancel");
+        if (!overlay || !status || !confirmButton || !cancelButton) return;
 
         const installButton = document.createElement("button");
         installButton.id = "alai-install-button";
@@ -1422,48 +1419,90 @@ st.html(
 
         const isStandalone = window.matchMedia("(display-mode: standalone)").matches
           || window.navigator.standalone === true;
+        const userAgent = window.navigator.userAgent || "";
+        const isIOS = /iPhone|iPad|iPod/i.test(userAgent)
+          || (/Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1);
+        const isFacebook = /FBAN|FBAV|FB_IAB|Messenger/i.test(userAgent);
+        const dismissalKey = "alai-install-dismissed-this-session";
+        let installPrompt = null;
+        let closeTimer = null;
         if (isStandalone) installButton.hidden = true;
 
-        let installPrompt = null;
+        const sessionDismissed = () => {{
+          try {{ return window.sessionStorage.getItem(dismissalKey) === "1"; }} catch (_) {{ return false; }}
+        }};
+        const rememberDismissal = () => {{
+          try {{ window.sessionStorage.setItem(dismissalKey, "1"); }} catch (_) {{}}
+        }};
+        const browserInstructions = () => {{
+          if (isIOS) return "On iPhone or iPad, open Alai in Safari, tap Share, then choose Add to Home Screen.";
+          if (isFacebook) return "Open Alai in Chrome or your device browser first. Facebook's in-app browser cannot install it.";
+          if (/Android/i.test(userAgent)) return "This browser has not offered its install prompt. In Chrome, use Install app or Add to Home screen from the browser menu.";
+          return "This browser has not offered an install prompt. Use its Install app option if available, or keep using Alai here.";
+        }};
+        const showPopup = (ignoreSessionDismissal = false) => {{
+          if (isStandalone || (!ignoreSessionDismissal && sessionDismissed())) return;
+          if (closeTimer) window.clearTimeout(closeTimer);
+          overlay.hidden = false;
+          requestAnimationFrame(() => overlay.classList.add("is-visible"));
+          if (isIOS || isFacebook || !installPrompt) status.textContent = browserInstructions();
+          else status.textContent = "Alai is ready to install. Your browser will ask you to confirm.";
+        }};
+        const hidePopup = (remember = true) => {{
+          if (remember) rememberDismissal();
+          overlay.classList.remove("is-visible");
+          closeTimer = window.setTimeout(() => {{ overlay.hidden = true; }}, 250);
+        }};
+
+        installButton.addEventListener("click", () => showPopup(true));
+        cancelButton.addEventListener("click", () => hidePopup(true));
+        overlay.addEventListener("click", (event) => {{ if (event.target === overlay) hidePopup(true); }});
+        document.addEventListener("keydown", (event) => {{
+          if (event.key === "Escape" && !overlay.hidden) hidePopup(true);
+        }});
+
         window.addEventListener("beforeinstallprompt", (event) => {{
           event.preventDefault();
-          installPrompt = event;
-        }});
-        window.addEventListener("appinstalled", () => {{ installButton.hidden = true; }});
-
-        const userAgent = window.navigator.userAgent || "";
-        const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
-        const isFacebook = /FBAN|FBAV|FB_IAB|Messenger/i.test(userAgent);
-        installButton.addEventListener("click", async () => {{
-          if (installPrompt) {{
-            const promptEvent = installPrompt;
+          if (isIOS || isFacebook) {{
             installPrompt = null;
-            try {{
-              await promptEvent.prompt();
-              const choice = await promptEvent.userChoice;
-              if (choice && choice.outcome === "accepted") installButton.hidden = true;
-            }} catch (error) {{
-              helpCopy.textContent = "Your browser could not open its install prompt. Try its Install option to add Alai with the Alai logo.";
-              help.hidden = false;
-            }}
+            if (!overlay.hidden) status.textContent = browserInstructions();
             return;
           }}
+          installPrompt = event;
+          if (!overlay.hidden) status.textContent = "Alai is ready to install. Your browser will ask you to confirm.";
+        }});
+        window.addEventListener("appinstalled", () => {{
+          installPrompt = null;
+          installButton.hidden = true;
+          status.textContent = "Alai is installed. You can open it from your home screen.";
+          confirmButton.hidden = true;
+          cancelButton.textContent = "Done";
+          if (overlay.hidden) showPopup(true);
+          window.setTimeout(() => hidePopup(true), 2200);
+        }});
 
-          if (isIOS) {{
-            helpCopy.textContent = "iPhone requires you to confirm installation in Safari. Open Alai in Safari and use its Share menu; the Alai logo is included.";
-          }} else if (isFacebook) {{
-            helpCopy.textContent = "Open Alai in Chrome or your device’s browser to install it. This in-app browser does not allow the install prompt.";
-          }} else if (/Android/i.test(userAgent)) {{
-            helpCopy.textContent = "This browser requires you to confirm installation from its menu. The Alai logo is included.";
-          }} else {{
-            helpCopy.textContent = "This browser requires you to confirm installation from its menu. The Alai logo is included.";
-          }}
-          help.hidden = false;
+        confirmButton.addEventListener("click", async () => {{
+          if (!installPrompt) {{ status.textContent = browserInstructions(); return; }}
+          const promptEvent = installPrompt;
+          installPrompt = null;
+          try {{
+            await promptEvent.prompt();
+            const choice = await promptEvent.userChoice;
+            if (choice && choice.outcome === "accepted") {{
+              status.textContent = "Alai is being added. Your browser will confirm when it is ready.";
+              confirmButton.disabled = true;
+            }} else {{
+              status.textContent = "No problem. Alai is still available in your browser.";
+              hidePopup(true);
+            }}
+          }} catch (error) {{ status.textContent = browserInstructions(); }}
         }});
-        closeHelp.addEventListener("click", () => {{ help.hidden = true; }});
-        document.addEventListener("keydown", (event) => {{
-          if (event.key === "Escape") help.hidden = true;
-        }});
+
+        const showAfterLoad = () => window.setTimeout(() => {{
+          if (!isStandalone && !sessionDismissed()) showPopup();
+        }}, 1100);
+        if (document.readyState === "complete") showAfterLoad();
+        else window.addEventListener("load", showAfterLoad, {{ once: true }});
       }})();
     </script>""",
     unsafe_allow_javascript=True,

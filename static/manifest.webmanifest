@@ -1,4 +1,4 @@
-﻿{
+{
   "id": "/",
   "name": "Alai - AI-powered Digital Bible",
   "short_name": "Alai",
@@ -19,6 +19,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/app/static/alai_icon_maskable_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
