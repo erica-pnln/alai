@@ -89,6 +89,20 @@ An enhanced version that makes the experience feel especially thoughtful and pol
 
 ---
 
+## Run Alai
+
+Run the app from the project root with:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+`streamlit_app.py` is the ASGI launcher. It serves the PWA manifest and the
+root-scoped service worker; `alai_ui.py` contains the Streamlit interface. Keep
+both files, `sw.js`, and the `static/` assets in the deployed repository.
+
+---
+
 ## Pages
 
 - **Home** — a peaceful welcome, the Verse of the Day, and a Featured Bible Study.
