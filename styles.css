@@ -1824,6 +1824,11 @@ section[data-testid="stSidebar"] .brand-subtag {
   margin-top: 0;
 }
 
+/* The background track is played from Streamlit's served media endpoint. */
+section[data-testid="stSidebar"] .st-key-background-music-player {
+  display: none !important;
+}
+
 /* Session-only, floating verse-navigation finger. */
 @keyframes alai-guide-bob {
   50% { transform: translateY(3px); }

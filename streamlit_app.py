@@ -54,34 +54,12 @@ css_file = Path(__file__).parent / "styles.css"
 if css_file.exists():
     st.markdown(f"<style>{css_file.read_text()}</style>", unsafe_allow_html=True)
 
-st.html(
-    """<script>
-    (() => {
-      let audio = window.__markBackgroundMusic;
-      if (!audio) {
-        audio = new Audio("/app/static/bg_music/leberch-worship-instrumental-587285.mp3");
-        window.__markBackgroundMusic = audio;
-      }
-      audio.loop = true;
-      audio.preload = "auto";
-      audio.volume = 0.65;
-
-      const startMusic = () => {
-        audio.play().catch((error) => {
-          if (audio.error) console.error("MARK background music failed to load.", error);
-        });
-      };
-
-      if (!window.__markMusicGestureRegistered) {
-        document.addEventListener("pointerdown", startMusic, { once: true, capture: true });
-        window.__markMusicGestureRegistered = true;
-      }
-      startMusic();
-    })();
-    </script>
-    """,
-    unsafe_allow_javascript=True,
-)
+with st.sidebar.container(key="background-music-player"):
+    st.audio(
+        str(Path(__file__).parent / "bg_music" / "leberch-worship-instrumental-587285.mp3"),
+        format="audio/mp3",
+        loop=True,
+    )
 
 st.html(
     """
@@ -1332,6 +1310,39 @@ st.markdown(
     '<div class="app-footer-title">Alai</div>'
     '</footer>',
     unsafe_allow_html=True,
+)
+
+st.html(
+    """<script>
+      (() => {
+        const player = document.querySelector(".st-key-background-music-player audio");
+        if (!player) return;
+
+        let audio = window.__markBackgroundMusic;
+        const playerSource = player.currentSrc || player.src;
+        if (!audio) {
+          audio = player;
+          window.__markBackgroundMusic = audio;
+        } else if (playerSource && audio.src !== playerSource) {
+          audio.pause();
+          audio.src = playerSource;
+          audio.load();
+        }
+        audio.loop = true;
+        audio.preload = "auto";
+        audio.volume = 0.65;
+
+        const startMusic = () => {
+          audio.play().catch(() => {});
+        };
+        if (!window.__markMusicGestureRegistered) {
+          document.addEventListener("pointerdown", startMusic, { once: true, capture: true });
+          window.__markMusicGestureRegistered = true;
+        }
+        startMusic();
+      })();
+    </script>""",
+    unsafe_allow_javascript=True,
 )
 
 st.html(
