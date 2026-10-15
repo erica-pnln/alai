@@ -1,7 +1,7 @@
-# MARK
-## Messenger of Almighty Righteous King
+# Alai
+## AI-powered Digital Bible
 
-> A digital Bible for gentle reflection, Scripture, and thoughtful guidance.
+> A Bible app for gentle reflection, Scripture, and thoughtful guidance.
 
 ---
 
@@ -15,7 +15,7 @@
 
 ## The Solution
 
-MARK brings Bible reading and guided reflection together in one Streamlit app.
+Alai brings Bible reading and guided reflection together in one Streamlit app.
 
 - Browse and search Bible passages.
 - Share a feeling and a personal message.
@@ -100,4 +100,4 @@ An enhanced version that makes the experience feel especially thoughtful and pol
 
 ## Purpose and Care
 
-MARK supports personal reflection and Bible study. It is not a replacement for professional, pastoral, or emergency support. Users should avoid entering sensitive personal information.
+Alai supports personal reflection and Bible study. It is not a replacement for professional, pastoral, or emergency support. Users should avoid entering sensitive personal information.

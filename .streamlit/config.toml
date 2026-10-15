@@ -21,3 +21,9 @@ backgroundColor = "#14251D"
 secondaryBackgroundColor = "#213A2C"
 textColor = "#F5F0E5"
 borderColor = "#47614F"
+
+[server]
+enableStaticServing = true
+
+[client]
+toolbarMode = "minimal"

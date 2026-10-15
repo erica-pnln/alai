@@ -6,7 +6,10 @@
 
   function boot() {
     var doc = document;
+    var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) return;
     doc.documentElement.classList.add('kb-anim');
+    var lastPageTitle = null;
 
     var WORD_TARGETS = '.home-hero-heading, .main h1, .verse-of-day-ref, .featured-study-topic, .home-section-heading, .home-hero-sub, .home-hero-kicker';
     var REVEAL_TARGETS = '.home-hero, .verse-of-day, .featured-study, .jump-help, .notice, .page-title-container, div[data-testid="stVerticalBlockBorderWrapper"]';
@@ -39,7 +42,7 @@
         var s = doc.createElement('span');
         s.className = 'kb-word';
         s.textContent = parts[i];
-        s.style.transitionDelay = (i * 45) + 'ms';
+        s.style.transitionDelay = (i * 24) + 'ms';
         frag.appendChild(s);
         frag.appendChild(doc.createTextNode(' '));
       }
@@ -54,6 +57,25 @@
     }
 
     function scan() {
+      var pageTitle = doc.querySelector('.page-title-container h1, .main h1, .main h2');
+      if (pageTitle) {
+        var titleText = pageTitle.textContent.trim();
+        if (lastPageTitle === null) {
+          lastPageTitle = titleText;
+        } else if (titleText && titleText !== lastPageTitle) {
+          lastPageTitle = titleText;
+          var pageContent = doc.querySelector('[data-testid="stMainBlockContainer"]');
+          if (pageContent) {
+            pageContent.classList.remove('mark-page-transition');
+            void pageContent.offsetWidth;
+            pageContent.classList.add('mark-page-transition');
+            setTimeout(function () {
+              pageContent.classList.remove('mark-page-transition');
+            }, 320);
+          }
+        }
+      }
+
       var i, list;
       list = doc.querySelectorAll(WORD_TARGETS);
       for (i = 0; i < list.length; i++) splitWords(list[i]);
@@ -78,15 +100,17 @@
     if (!window.__kbTilt) {
       window.__kbTilt = true;
       doc.addEventListener('pointermove', function (e) {
+        if (e.pointerType === 'touch') return;
         var t = e.target;
         var card = t && t.closest ? t.closest('.kb-tilt') : null;
         if (!card) return;
         var r = card.getBoundingClientRect();
         var px = (e.clientX - r.left) / r.width - 0.5;
         var py = (e.clientY - r.top) / r.height - 0.5;
-        card.style.transform = 'perspective(1000px) rotateX(' + (-py * 3).toFixed(2) + 'deg) rotateY(' + (px * 3.5).toFixed(2) + 'deg) translateY(-3px)';
+        card.style.transform = 'perspective(1000px) rotateX(' + (-py * 1).toFixed(2) + 'deg) rotateY(' + (px * 1.2).toFixed(2) + 'deg) translateY(-1px)';
       }, { passive: true });
       doc.addEventListener('pointerout', function (e) {
+        if (e.pointerType === 'touch') return;
         var t = e.target;
         var card = t && t.closest ? t.closest('.kb-tilt') : null;
         if (card && (!e.relatedTarget || !card.contains(e.relatedTarget))) card.style.transform = '';

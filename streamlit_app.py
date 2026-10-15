@@ -1,6 +1,7 @@
 import hashlib
 import html
 import inspect
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import cast
@@ -16,13 +17,13 @@ from utils.scripture_retriever import (
 from utils.safety_checks import is_crisis_message, CRISIS_MESSAGE
 from utils.ai_reflection import generate_reflection, generate_study, STUDY_MODES
 
-APP_NAME = "MARK"
-APP_MEANING = "Messenger of Almighty Righteous King"
-APP_SUBTITLE = "A digital Bible"
+APP_NAME = "Alai"
+APP_MEANING = "Alai"
+APP_SUBTITLE = "AI-powered Digital Bible"
 
 st.set_page_config(
     page_title=APP_NAME,
-    page_icon="📖",
+    page_icon=str(Path(__file__).parent / "static" / "alai_logo.png"),
     layout="wide",
     initial_sidebar_state="auto",
 )
@@ -44,10 +45,256 @@ PRIVACY_NOTICE = (
 )
 
 css_file = Path(__file__).parent / "styles.css"
+# Study mode centering CSS reload marker.
 if css_file.exists():
     st.markdown(f"<style>{css_file.read_text()}</style>", unsafe_allow_html=True)
 
+st.html(
+    """<script>
+    (() => {
+      let audio = window.__markBackgroundMusic;
+      if (!audio) {
+        audio = new Audio("/app/static/bg_music/leberch-worship-instrumental-587285.mp3");
+        window.__markBackgroundMusic = audio;
+      }
+      audio.loop = true;
+      audio.preload = "auto";
+      audio.volume = 0.65;
+
+      const startMusic = () => {
+        audio.play().catch((error) => {
+          if (audio.error) console.error("MARK background music failed to load.", error);
+        });
+      };
+
+      if (!window.__markMusicGestureRegistered) {
+        document.addEventListener("pointerdown", startMusic, { once: true, capture: true });
+        window.__markMusicGestureRegistered = true;
+      }
+      startMusic();
+    })();
+    </script>
+    """,
+    unsafe_allow_javascript=True,
+)
+
+st.html(
+    """
+    <style>
+      .mark-study-scroll-indicator {
+        position: fixed;
+        right: 1.5rem;
+        bottom: 1.25rem;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: .55rem;
+        max-width: min(320px, calc(100vw - 2rem));
+        padding: .65rem .85rem;
+        border-radius: 999px;
+        background: rgba(17, 32, 28, 0.82);
+        border: 1px solid rgba(214, 180, 99, 0.7);
+        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.26);
+        color: #f5f0e5;
+        font-size: .82rem;
+        line-height: 1.35;
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity .25s ease, transform .25s ease;
+        backdrop-filter: blur(10px);
+      }
+      .mark-study-scroll-indicator[hidden] {
+        display: none !important;
+      }
+      .mark-study-scroll-indicator__icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        background: rgba(214, 180, 99, 0.18);
+        color: #f8d58a;
+        font-size: 1rem;
+        font-weight: 700;
+        animation: markStudyScrollBounce 1.3s ease-in-out infinite;
+      }
+      .mark-study-scroll-indicator__text {
+        color: #f5f0e5;
+        font-size: .78rem;
+        font-weight: 600;
+        letter-spacing: .01em;
+      }
+      @keyframes markStudyScrollBounce {
+        0%, 100% { transform: translateY(0); opacity: 0.8; }
+        50% { transform: translateY(6px); opacity: 1; }
+      }
+      @media (max-width: 700px) {
+        .mark-study-scroll-indicator {
+          right: .75rem;
+          bottom: .9rem;
+          max-width: min(260px, calc(100vw - 1.25rem));
+          padding: .5rem .7rem;
+        }
+        .mark-study-scroll-indicator__text {
+          font-size: .72rem;
+        }
+      }
+    </style>
+    <script>
+      (() => {
+        if (window.__markStudyHintControllerV2) return;
+        window.__markStudyHintControllerV2 = true;
+
+        const PAGE_MARKER_ID = 'mark-study-page-marker';
+        const INDICATOR_ID = 'mark-study-scroll-indicator';
+        const STATE_KEY = 'markStudyScrollHintStateV2';
+        let buttonObserver = null;
+        let observedMain = null;
+
+        function getHint() {
+          return document.getElementById(INDICATOR_ID);
+        }
+
+        function setHintState(isVisible) {
+          const hint = getHint();
+          if (!hint) return;
+          hint.hidden = !isVisible;
+        }
+
+        function dismissHint() {
+          sessionStorage.setItem(STATE_KEY, 'dismissed');
+          setHintState(false);
+          if (buttonObserver) buttonObserver.disconnect();
+        }
+
+        function hasReachedGenerateButton(main) {
+          const buttons = main.querySelectorAll('button');
+          const button = Array.from(buttons).find(
+            (item) => item.innerText.includes('Generate study')
+          );
+          if (!button) return false;
+
+          const buttonRect = button.getBoundingClientRect();
+          const mainRect = main.getBoundingClientRect();
+          return buttonRect.top < mainRect.bottom && buttonRect.bottom > mainRect.top;
+        }
+
+        function handleMainScroll() {
+          const main = document.querySelector('[data-testid="stMain"]');
+          if (main && hasReachedGenerateButton(main)) dismissHint();
+        }
+
+        function observeGenerateButton() {
+          const marker = document.getElementById(PAGE_MARKER_ID);
+          if (!marker || sessionStorage.getItem(STATE_KEY) === 'dismissed') return;
+
+          const main = document.querySelector('[data-testid="stMain"]');
+          if (!main) return;
+          if (observedMain !== main) {
+            if (observedMain) observedMain.removeEventListener('scroll', handleMainScroll);
+            observedMain = main;
+            observedMain.addEventListener('scroll', handleMainScroll, { passive: true });
+          }
+
+          const buttons = main ? main.querySelectorAll('button') : [];
+          const generateButton = Array.from(buttons).find(
+            (button) => button.innerText.includes('Generate study')
+          );
+          if (!generateButton) return;
+
+          if (!('IntersectionObserver' in window)) {
+            if (hasReachedGenerateButton(main)) dismissHint();
+            return;
+          }
+
+          if (!buttonObserver) {
+            buttonObserver = new IntersectionObserver((entries) => {
+              if (entries.some((entry) => entry.intersectionRatio >= 0.15)) dismissHint();
+            }, { root: main, threshold: 0.15 });
+          }
+          buttonObserver.observe(generateButton);
+          if (hasReachedGenerateButton(main)) dismissHint();
+        }
+
+        function syncStudyPage() {
+          const marker = document.getElementById(PAGE_MARKER_ID);
+          if (!marker) return;
+
+          if (sessionStorage.getItem(STATE_KEY) === null) {
+            sessionStorage.setItem(STATE_KEY, 'ready');
+          }
+
+          setHintState(sessionStorage.getItem(STATE_KEY) !== 'dismissed');
+          observeGenerateButton();
+        }
+
+        function setup() {
+          syncStudyPage();
+          const observer = new MutationObserver(() => {
+            syncStudyPage();
+          });
+          observer.observe(document.body, { childList: true, subtree: true });
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', setup, { once: true });
+        } else {
+          setup();
+        }
+      })();
+    </script>
+    """,
+    unsafe_allow_javascript=True,
+)
+
 if "unsafe_allow_javascript" in inspect.signature(st.html).parameters:
+    st.html(
+        """<script>
+        (() => {
+          if (window.__markFormHintCopy) return;
+          window.__markFormHintCopy = true;
+          const hintsToRemove = [
+            "Press Enter to submit form",
+            "Press Enter to submit",
+            "Press Ctrl+Enter to apply",
+          ];
+
+          function updateText(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+              let text = node.nodeValue;
+              for (const hint of hintsToRemove) {
+                text = text.replaceAll(hint, "");
+              }
+              if (text !== node.nodeValue) node.nodeValue = text;
+              return;
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+            let textNode;
+            while ((textNode = walker.nextNode())) {
+              let text = textNode.nodeValue;
+              for (const hint of hintsToRemove) {
+                text = text.replaceAll(hint, "");
+              }
+              if (text !== textNode.nodeValue) textNode.nodeValue = text;
+            }
+          }
+
+          updateText(document.body);
+          new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+              if (mutation.type === "characterData") {
+                updateText(mutation.target);
+              } else {
+                mutation.addedNodes.forEach(updateText);
+              }
+            }
+          }).observe(document.body, { childList: true, characterData: true, subtree: true });
+        })();
+        </script>""",
+        unsafe_allow_javascript=True,
+    )
     st.html(
         """<script>
         (() => {
@@ -73,14 +320,89 @@ if "unsafe_allow_javascript" in inspect.signature(st.html).parameters:
         </script>""",
         unsafe_allow_javascript=True,
     )
+    st.html(
+        """<script>
+        (() => {
+          if (window.__markScrollReveal || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          window.__markScrollReveal = true;
+          const selector = [
+            ".verse-of-day",
+            ".featured-study",
+            ".scripture-card",
+            ".result-card",
+            ".passage-summary",
+            ".jump-help",
+            ".home-section-heading",
+            ".st-key-home-actions",
+            ".st-key-library-jump",
+            ".st-key-library-passage-selectors",
+            ".st-key-library-continue-reading",
+            ".st-key-study-jump",
+            ".st-key-study-passage-selectors",
+            ".st-key-vent-options"
+          ].join(",");
+          const pending = new Set();
+          let activeScrollTarget = null;
+          let scanScheduled = false;
 
-motion_file = Path(__file__).parent / "motion.js"
-if motion_file.exists():
-    st.markdown(
-        f"<script>{motion_file.read_text()}</script>",
-        unsafe_allow_html=True,
+          function observeWithin(node) {
+            if (!(node instanceof Element)) return;
+            if (node.matches(selector)) {
+              node.classList.add("mark-scroll-reveal");
+              pending.add(node);
+            }
+            node.querySelectorAll(selector).forEach((element) => {
+              element.classList.add("mark-scroll-reveal");
+              pending.add(element);
+            });
+            scanVisible();
+          }
+
+          function scanVisible() {
+            if (scanScheduled) return;
+            scanScheduled = true;
+            window.setTimeout(() => {
+              scanScheduled = false;
+              const root = document.querySelector('[data-testid="stMain"]');
+              const bounds = root ? root.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+              const revealLine = bounds.bottom - Math.min(54, (bounds.bottom - bounds.top) * 0.06);
+              for (const element of pending) {
+                if (!element.isConnected) {
+                  pending.delete(element);
+                  continue;
+                }
+                const rect = element.getBoundingClientRect();
+                if (rect.top <= revealLine && rect.bottom >= bounds.top + 24) {
+                  element.classList.add("is-visible");
+                  pending.delete(element);
+                }
+              }
+            }, 40);
+          }
+
+          function attachScrollListener() {
+            const root = document.querySelector('[data-testid="stMain"]');
+            const target = root || window;
+            if (target === activeScrollTarget) return;
+            if (activeScrollTarget) activeScrollTarget.removeEventListener("scroll", scanVisible);
+            activeScrollTarget = target;
+            activeScrollTarget.addEventListener("scroll", scanVisible, { passive: true });
+          }
+
+          observeWithin(document.body);
+          attachScrollListener();
+          document.addEventListener("scroll", scanVisible, { passive: true, capture: true });
+          window.addEventListener("resize", scanVisible, { passive: true });
+          new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+              mutation.addedNodes.forEach(observeWithin);
+            }
+            attachScrollListener();
+          }).observe(document.body, { childList: true, subtree: true });
+        })();
+        </script>""",
+        unsafe_allow_javascript=True,
     )
-
 
 @st.cache_data
 def get_data():
@@ -99,6 +421,7 @@ if "navigation" not in st.session_state:
 def go(page: str):
     st.session_state["page"] = page
     st.session_state["navigation"] = NAV_LABELS[page]
+    st.session_state["page_navigation_id"] = st.session_state.get("page_navigation_id", 0) + 1
 
 
 def _daily_seed(date: str) -> int:
@@ -172,6 +495,7 @@ def explore_in_study(book: str, chapter: int, start: int, end: int):
     st.session_state["study_mode"] = "overview"
     st.session_state["study_result"] = None
     st.session_state["study_result_key"] = None
+    st.session_state["study_loading_message"] = "Opening selected passage…"
     go("Bible Study")
 
 
@@ -182,6 +506,7 @@ def open_in_library(book: str, chapter: int, start: int, end: int):
     st.session_state["library_start"] = start
     st.session_state["library_end"] = end
     st.session_state["library_notice"] = ""
+    st.session_state["library_loading_message"] = "Opening selected passage…"
     go("Bible Library")
 
 
@@ -207,6 +532,9 @@ def move_library_verse(direction: int):
     st.session_state["library_start"] = target
     st.session_state["library_end"] = target
     st.session_state["library_notice"] = ""
+    if direction == 1 and st.session_state.get("library_tutorial_state_v3") == "go_to_verse":
+        st.session_state["library_tutorial_state_v3"] = "completed"
+    st.session_state["library_loading_message"] = "Opening selected verse…"
 
 
 def move_library_chapter(direction: int):
@@ -234,49 +562,26 @@ def move_library_chapter(direction: int):
     st.session_state["library_start"] = verses[0]
     st.session_state["library_end"] = verses[-1]
     st.session_state["library_notice"] = ""
-
-
-def jump_to_reference():
-    """Set the Library passage from a typed reference like 'John 3:16'."""
-    query = st.session_state.get("library_jump", "")
-    ref = search_reference(df, query)
-    if ref is None:
-        st.session_state["library_notice"] = (
-            f"Couldn't find '{query.strip()}'. Try a format like 'John 3:16' or 'Genesis 1:1-5'."
-        )
-        return
-    book, chapter, start, end = ref
-    st.session_state["library_testament"] = (
-        df[df["book"] == book]["testament"].iloc[0]
-    )
-    st.session_state["library_book"] = book
-    st.session_state["library_chapter"] = chapter
-    st.session_state["library_start"] = start
-    st.session_state["library_end"] = end
-    st.session_state["library_notice"] = ""
+    st.session_state["library_loading_message"] = "Loading chapter…"
 
 
 st.sidebar.markdown(
     '<div class="sidebar-brand">'
-    '<div class="brand-mark" aria-label="MARK logo">'
-    '<span class="brand-initials">MARK</span>'
-    '<span class="book-stack" aria-hidden="true">'
-    '<span class="book-spine book-spine-back"></span>'
-    '<span class="book-spine book-spine-middle"></span>'
-    '<span class="book-spine book-spine-front"></span>'
-    '</span>'
+    '<div class="brand-row">'
+    '<div class="brand-mark">'
+    '<img class="brand-logo" src="/app/static/alai_logo.png" alt="Alai logo">'
     '</div>'
-    '<div class="brand-copy">'
     f'<div class="brand-meaning">{html.escape(APP_MEANING)}</div>'
-    f'<div class="brand-subtag">{html.escape(APP_SUBTITLE)}</div>'
     '</div>'
+    f'<div class="brand-subtag">{html.escape(APP_SUBTITLE)}</div>'
     '</div>',
     unsafe_allow_html=True,
 )
 st.sidebar.markdown(
     '<div class="sidebar-intro">'
-    '<span class="sidebar-intro-kicker">A moment for you</span>'
-    '<span class="sidebar-intro-copy">Read slowly. Speak honestly. Leave with a little more light.</span>'
+    '<span class="sidebar-intro-copy">Offer your life to Him</span>'
+    '<span class="sidebar-intro-copy">Surrender all to Him</span>'
+    '<span class="sidebar-intro-tagline">He has everything, yet He wants you &#129309;</span>'
     '</div>',
     unsafe_allow_html=True,
 )
@@ -290,11 +595,51 @@ for page, label in NAV_LABELS.items():
         on_click=go,
         args=(page,),
     )
-
-
 def show_data_warning():
     if is_placeholder:
         st.warning(status_message)
+
+
+def _render_action_loading(
+    placeholder,
+    message: str,
+    detail: str,
+    *,
+    overlay: bool = False,
+) -> None:
+    """Render a MARK-themed loading state inside its owning feature area."""
+    card = (
+        '<div class="mark-action-loading" role="status" aria-live="polite">'
+        '<span class="mark-action-loading__spinner" aria-hidden="true"></span>'
+        '<div><strong>'
+        f'{html.escape(message)}'
+        '</strong><div class="mark-action-loading__detail">'
+        f'{html.escape(detail)}'
+        '</div></div></div>'
+    )
+    markup = f'<div class="mark-action-overlay">{card}</div>' if overlay else card
+    with placeholder.container():
+        st.markdown(markup, unsafe_allow_html=True)
+
+
+def _set_library_loading(message: str) -> None:
+    st.session_state["library_loading_message"] = message
+    if message.startswith("Applying verse range") and st.session_state.get("library_tutorial_state_v3") == "select_verse":
+        st.session_state["library_tutorial_state_v3"] = "go_to_verse"
+
+
+def _set_study_loading(message: str) -> None:
+    st.session_state["study_loading_message"] = message
+
+
+def _render_library_tutorial_hint(container) -> None:
+    container.button(
+        "👆",
+        key="library_tutorial_go",
+        type="secondary",
+        on_click=move_library_verse,
+        args=(1,),
+    )
 
 
 def render_passage(passage_df, reference: str, testament: str):
@@ -353,17 +698,18 @@ def page_home():
     # Feature 1: Welcome / hero section
     st.markdown(
         '<section class="home-hero">'
-        '<div class="home-hero-kicker">MARK · A Digital Bible</div>'
+        f'<div class="home-hero-kicker">{html.escape(APP_NAME)} · {html.escape(APP_SUBTITLE)}</div>'
         '<h2 class="home-hero-heading">Grow in God&rsquo;s Word</h2>'
         '<p class="home-hero-sub">Take a quiet moment to read, study, and reflect on Scripture '
         'that meets you right where you are today.</p>'
         '</section>',
         unsafe_allow_html=True,
     )
-    btn1, btn2, btn3 = st.columns(3)
-    btn1.button("📜 Start Bible Study", type="primary", width="stretch", on_click=go, args=("Bible Study",))
-    btn2.button("📖 Read the Bible", width="stretch", on_click=go, args=("Bible Library",))
-    btn3.button("💛 Vent Your Heart", width="stretch", on_click=go, args=("Vent",))
+    with st.container(key="home-actions"):
+        btn1, btn2, btn3 = st.columns(3)
+        btn1.button("📜 Start Bible Study", type="primary", width="stretch", on_click=go, args=("Bible Study",))
+        btn2.button("📖 Read the Bible", width="stretch", on_click=go, args=("Bible Library",))
+        btn3.button("💛 Vent Your Heart", width="stretch", on_click=go, args=("Vent",))
 
     st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
 
@@ -439,6 +785,8 @@ def page_library():
     show_data_warning()
     if not require_bible_data():
         return
+    if "library_tutorial_state_v3" not in st.session_state:
+        st.session_state["library_tutorial_state_v3"] = "select_verse"
     # Single browsing area — no tabs.
     with st.container():
         # Fast path: type a reference and jump straight to it.
@@ -457,19 +805,57 @@ def page_library():
         # Keep the quick-reference search centered without spacer columns on small screens.
         with st.container(key="library-jump"):
             st.markdown('<div class="library-nav-label">⚡ Jump to a reference</div>', unsafe_allow_html=True)
-            jump_inner_col, jump_btn = st.columns([3, 1])
-            jump_query = jump_inner_col.text_input(
-                "Go to",
-                placeholder="e.g. John 3:16, Psalms 23, or Genesis 1:1-5",
-                key="library_jump",
-                label_visibility="collapsed",
+            with st.form("library_jump_form"):
+                jump_inner_col, jump_btn = st.columns([3, 1])
+                jump_query = jump_inner_col.text_input(
+                    "Go to",
+                    placeholder="Search Bible content here",
+                    key="library_jump",
+                    label_visibility="collapsed",
+                )
+                jump_clicked = jump_btn.form_submit_button(
+                    ":material/search: Search",
+                    type="primary",
+                    width="stretch",
+                )
+            jump_loading = st.empty()
+
+        if jump_clicked:
+            query = jump_query
+            _render_action_loading(
+                jump_loading,
+                "Searching Bible passages…",
+                "Finding the requested book, chapter, and verse.",
+                overlay=True,
             )
-            jump_btn.button(
-                "Go",
-                type="primary",
-                width="stretch",
-                on_click=jump_to_reference,
-            )
+            opening_passage = False
+            try:
+                reference = search_reference(df, query)
+                if reference is None:
+                    st.session_state["library_notice"] = (
+                        f"Couldn't find '{query.strip()}'. Try a format like 'John 3:16' or 'Genesis 1:1-5'."
+                    )
+                else:
+                    book, chapter, start, end = reference
+                    st.session_state["library_testament"] = (
+                        df[df["book"] == book]["testament"].iloc[0]
+                    )
+                    st.session_state["library_book"] = book
+                    st.session_state["library_chapter"] = chapter
+                    st.session_state["library_start"] = start
+                    st.session_state["library_end"] = end
+                    st.session_state["library_notice"] = ""
+                    st.session_state["library_loading_message"] = "Opening requested passage…"
+                    opening_passage = True
+                    _render_action_loading(
+                        jump_loading,
+                        "Opening requested passage…",
+                        "Applying the matching Bible reference.",
+                        overlay=True,
+                    )
+            finally:
+                if not opening_passage:
+                    jump_loading.empty()
 
         st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
 
@@ -482,69 +868,99 @@ def page_library():
         if st.session_state.get("library_testament") not in testaments:
             st.session_state["library_testament"] = testaments[0]
         testament = cast(str, testament_col.selectbox(
-            "📖 Testament", testaments, key="library_testament"
+            "📖 Testament", testaments, key="library_testament",
+            on_change=_set_library_loading, args=("Applying Bible selection…",),
         ))
 
         books = get_books(df, testament)
         if st.session_state.get("library_book") not in books:
             st.session_state["library_book"] = books[0]
         book = cast(str, book_col.selectbox(
-            "📚 Book", books, key="library_book"
+            "📚 Book", books, key="library_book",
+            on_change=_set_library_loading, args=("Loading selected book…",),
         ))
 
         chapters = get_chapters(df, book)
         if st.session_state.get("library_chapter") not in chapters:
             st.session_state["library_chapter"] = chapters[0]
         chapter = cast(int, chapter_col.selectbox(
-            "🔢 Chapter", chapters, key="library_chapter"
+            "🔢 Chapter", chapters, key="library_chapter",
+            on_change=_set_library_loading, args=("Loading chapter…",),
         ))
 
         verses = get_verse_numbers(df, book, chapter)
         if st.session_state.get("library_start") not in verses:
             st.session_state["library_start"] = verses[0]
         start = cast(int, start_col.selectbox(
-            "🔽 From Verse", verses, key="library_start"
+            "🔽 From Verse", verses, key="library_start",
+            on_change=_set_library_loading, args=("Applying verse range…",),
         ))
 
         end_options = [v for v in verses if v >= start]
-        if st.session_state.get("library_end") not in end_options:
-            st.session_state["library_end"] = end_options[-1]
-        end = cast(int, end_col.selectbox(
-            "🔽 To Verse", end_options, key="library_end"
-        ))
+        default_end = 31 if 31 in end_options else end_options[-1]
+        old_default_end = end_options[min(4, len(end_options) - 1)]
+        current_end = st.session_state.get("library_end")
+        if current_end not in end_options or (
+            start == verses[0] and current_end == old_default_end
+        ):
+            st.session_state["library_end"] = default_end
+        with end_col.container(key="library_to_verse_guide"):
+            end = cast(int, st.selectbox(
+                "🔽 To Verse", end_options, key="library_end",
+                on_change=_set_library_loading, args=("Applying verse range…",),
+            ))
 
-        passage = get_passage(df, book, chapter, start, end)
-        render_passage(passage, format_reference(book, chapter, start, end), testament)
+            if st.session_state.get("library_tutorial_state_v3") == "go_to_verse":
+                _render_library_tutorial_hint(st)
+
+        action_loading = st.empty()
+        loading_message = st.session_state.get("library_loading_message")
+        if loading_message:
+            _render_action_loading(
+                action_loading,
+                loading_message,
+                "Applying your selection to the Bible passage.",
+                overlay=True,
+            )
+        try:
+            passage = get_passage(df, book, chapter, start, end)
+            render_passage(passage, format_reference(book, chapter, start, end), testament)
+        finally:
+            action_loading.empty()
+            st.session_state.pop("library_loading_message", None)
+            if jump_clicked and st.session_state.get("library_notice") == "":
+                jump_loading.empty()
 
         # Reading flow: prev/next verse AND prev/next chapter
         st.markdown('<div class="library-nav-label">📚 Continue reading</div>', unsafe_allow_html=True)
-        c1, c2, c3, c4 = st.columns(4)
-        c1.button(
-            "⏮️ Prev chapter",
-            width="stretch",
-            on_click=move_library_chapter,
-            args=(-1,),
-        )
-        c2.button(
-            "◀️ Prev verse",
-            disabled=verses.index(start) == 0,
-            width="stretch",
-            on_click=move_library_verse,
-            args=(-1,),
-        )
-        c3.button(
-            "▶️ Next verse",
-            disabled=verses.index(start) >= len(verses) - 1,
-            width="stretch",
-            on_click=move_library_verse,
-            args=(1,),
-        )
-        c4.button(
-            "⏭️ Next chapter",
-            width="stretch",
-            on_click=move_library_chapter,
-            args=(1,),
-        )
+        with st.container(key="library-continue-reading"):
+            c1, c2, c3, c4 = st.columns(4)
+            c1.button(
+                "⏮️ Prev chapter",
+                width="stretch",
+                on_click=move_library_chapter,
+                args=(-1,),
+            )
+            c2.button(
+                "◀️ Prev verse",
+                disabled=verses.index(start) == 0,
+                width="stretch",
+                on_click=move_library_verse,
+                args=(-1,),
+            )
+            c3.button(
+                "▶️ Next verse",
+                disabled=verses.index(start) >= len(verses) - 1,
+                width="stretch",
+                on_click=move_library_verse,
+                args=(1,),
+            )
+            c4.button(
+                "⏭️ Next chapter",
+                width="stretch",
+                on_click=move_library_chapter,
+                args=(1,),
+            )
         if st.session_state.get("library_notice"):
             st.info(st.session_state["library_notice"])
 
@@ -556,16 +972,18 @@ def page_vent():
 
     with st.container(border=True):
         st.write("A quiet place to share what is on your heart and receive a gentle Scripture-based reflection.")
-        language_col, passage_col = st.columns(2)
-        language = language_col.selectbox("🌐 Preferred Language", LANGUAGES)
-        preference = passage_col.selectbox(
-            "📖 Passage length (optional)",
-            ["Let the system choose", "Short passage", "Complete passage"],
-        )
+        with st.container(key="vent-options"):
+            language_col, passage_col = st.columns(2)
+            language = language_col.selectbox("🌐 Preferred Language", LANGUAGES)
+            preference = passage_col.selectbox(
+                "📖 Passage length (optional)",
+                ["Let the system choose", "Short passage", "Complete passage"],
+            )
         message = st.text_area(
             "💭 Your message",
-            placeholder="Share what is on your heart...",
+            placeholder="Type here... Feeling lost, sad, or disappointed? What seems to be the problem? Are you okay? You can rant here and ask for His guidance.",
             height=150,
+            key="vent_message",
         )
         button_left, button_center, button_right = st.columns([1, 1.2, 1])
         guidance_clicked = button_center.button(
@@ -573,6 +991,7 @@ def page_vent():
             type="primary",
             width="stretch",
         )
+        response_loading = st.empty()
 
     if guidance_clicked:
         if not message.strip():
@@ -582,13 +1001,20 @@ def page_vent():
         elif is_placeholder:
             st.warning("Add a verified Bible CSV before requesting an AI reflection.")
         else:
-            with st.spinner("Preparing your Scripture reflection..."):
+            _render_action_loading(
+                response_loading,
+                "Preparing your Scripture reflection…",
+                "Please wait while Alai finds a passage and prepares your reflection and prayer.",
+            )
+            try:
                 passage, passage_reference = select_relevant_passage(
                     df, message, preference
                 )
                 result = generate_reflection(
                     message, passage, passage_reference, language
                 )
+            finally:
+                response_loading.empty()
             if not result.ok:
                 st.warning(result.message)
             else:
@@ -645,9 +1071,97 @@ def render_study_sections(sections):
 
 def page_bible_study():
     render_page_title("Bible Study", "📜")
+    st.markdown(
+        '<div id="mark-study-page-marker" aria-hidden="true" style="display:none"></div>',
+        unsafe_allow_html=True,
+    )
     show_data_warning()
     if not require_bible_data():
         return
+
+    st.markdown(
+        '<div class="jump-help">'
+        '<div class="jump-help-title">How to search &mdash; try these in order:</div>'
+        '<div class="jump-help-step"><span class="jump-help-badge">1</span>'
+        '<span>Read a whole chapter &mdash; <code>Psalms 23</code></span></div>'
+        '<div class="jump-help-step"><span class="jump-help-badge">2</span>'
+        '<span>Go to one verse &mdash; <code>John 3:16</code></span></div>'
+        '<div class="jump-help-step"><span class="jump-help-badge">3</span>'
+        '<span>Read a range of verses &mdash; <code>Genesis 1:1-5</code></span></div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    with st.container(key="study-jump"):
+        st.markdown(
+            '<div class="library-nav-label">⚡ Jump to a reference</div>',
+            unsafe_allow_html=True,
+        )
+        with st.form("study_jump_form"):
+            jump_input_col, jump_btn = st.columns([3, 1])
+            jump_query = jump_input_col.text_input(
+                "Go to",
+                placeholder="Search Bible content here",
+                key="study_jump",
+                label_visibility="collapsed",
+            )
+            jump_clicked = jump_btn.form_submit_button(
+                ":material/search: Search",
+                type="primary",
+                width="stretch",
+            )
+        jump_loading = st.empty()
+
+    if jump_clicked:
+        _render_action_loading(
+            jump_loading,
+            "Searching Bible passages…",
+            "Finding the requested book, chapter, and verse.",
+            overlay=True,
+        )
+        opening_passage = False
+        try:
+            selected_reference = search_reference(df, jump_query)
+            if selected_reference is None:
+                st.session_state["study_notice"] = (
+                    f"Couldn't find '{jump_query.strip()}'. Try a format like "
+                    "'John 3:16' or 'Genesis 1:1-5'."
+                )
+            else:
+                selected_book, selected_chapter, selected_start, selected_end = (
+                    selected_reference
+                )
+                st.session_state["study_testament"] = (
+                    df[df["book"] == selected_book]["testament"].iloc[0]
+                )
+                st.session_state["study_book"] = selected_book
+                st.session_state["study_chapter"] = selected_chapter
+                st.session_state["study_start"] = selected_start
+                st.session_state["study_end"] = selected_end
+                st.session_state["study_notice"] = ""
+                st.session_state["study_loading_message"] = "Opening requested passage…"
+                opening_passage = True
+                _render_action_loading(
+                    jump_loading,
+                    "Opening requested passage…",
+                    "Applying the matching Bible reference.",
+                    overlay=True,
+                )
+        finally:
+            if not opening_passage:
+                jump_loading.empty()
+
+    if st.session_state.get("study_notice"):
+        st.info(st.session_state["study_notice"])
+
+    st.markdown(
+        '''
+        <div id="mark-study-scroll-indicator" class="mark-study-scroll-indicator" aria-live="polite" hidden>
+          <div class="mark-study-scroll-indicator__icon">↓</div>
+          <div class="mark-study-scroll-indicator__text">Scroll down to the AI study tools</div>
+        </div>
+        ''',
+        unsafe_allow_html=True,
+    )
 
     # Keep all passage selectors on one desktop row and group them responsively.
     with st.container(key="study-passage-selectors"):
@@ -658,28 +1172,46 @@ def page_bible_study():
     if st.session_state.get("study_testament") not in testaments:
         st.session_state["study_testament"] = testaments[0]
     testament = cast(str, testament_col.selectbox(
-        "📖 Testament", testaments, key="study_testament"
+        "📖 Testament", testaments, key="study_testament",
+        on_change=_set_study_loading, args=("Applying Bible selection…",),
     ))
 
     books = get_books(df, testament)
     if st.session_state.get("study_book") not in books:
         st.session_state["study_book"] = books[0]
-    book = cast(str, book_col.selectbox("📚 Book", books, key="study_book"))
+    book = cast(str, book_col.selectbox(
+        "📚 Book", books, key="study_book",
+        on_change=_set_study_loading, args=("Loading selected book…",),
+    ))
 
     chapters = get_chapters(df, book)
     if st.session_state.get("study_chapter") not in chapters:
         st.session_state["study_chapter"] = chapters[0]
-    chapter = cast(int, chapter_col.selectbox("🔢 Chapter", chapters, key="study_chapter"))
+    chapter = cast(int, chapter_col.selectbox(
+        "🔢 Chapter", chapters, key="study_chapter",
+        on_change=_set_study_loading, args=("Loading chapter…",),
+    ))
 
     verses = get_verse_numbers(df, book, chapter)
     if st.session_state.get("study_start") not in verses:
         st.session_state["study_start"] = verses[0]
-    start = cast(int, start_col.selectbox("🔽 From Verse", verses, key="study_start"))
+    start = cast(int, start_col.selectbox(
+        "🔽 From Verse", verses, key="study_start",
+        on_change=_set_study_loading, args=("Applying verse range…",),
+    ))
 
     end_options = [v for v in verses if v >= start]
-    if st.session_state.get("study_end") not in end_options:
-        st.session_state["study_end"] = end_options[-1]
-    end = cast(int, end_col.selectbox("🔽 To Verse", end_options, key="study_end"))
+    default_end = 31 if 31 in end_options else end_options[-1]
+    old_default_end = end_options[min(4, len(end_options) - 1)]
+    current_end = st.session_state.get("study_end")
+    if current_end not in end_options or (
+        start == verses[0] and current_end == old_default_end
+    ):
+        st.session_state["study_end"] = default_end
+    end = cast(int, end_col.selectbox(
+        "🔽 To Verse", end_options, key="study_end",
+        on_change=_set_study_loading, args=("Applying verse range…",),
+    ))
 
     # Studies are generated in English (language selector removed).
     language = "🇬🇧 English"
@@ -688,39 +1220,72 @@ def page_bible_study():
     passage = get_passage(df, book, chapter, start, end)
 
     # Always show the original, dataset-backed Scripture first.
-    render_passage(passage, reference, testament)
+    study_selection_loading = st.empty()
+    loading_message = st.session_state.get("study_loading_message")
+    if loading_message:
+        _render_action_loading(
+            study_selection_loading,
+            loading_message,
+            "Applying your selection to the Bible passage.",
+            overlay=True,
+        )
+    try:
+        render_passage(passage, reference, testament)
+    finally:
+        study_selection_loading.empty()
+        st.session_state.pop("study_loading_message", None)
+        if jump_clicked:
+            jump_loading.empty()
 
     st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="home-section-heading">✨ Study this passage</div>', unsafe_allow_html=True)
+    st.markdown('<div class="home-section-heading study-section-heading">✨ Study this passage</div>', unsafe_allow_html=True)
 
     mode_labels = [STUDY_MODES[mode]["label"] for mode in STUDY_MODES]
     mode_keys = list(STUDY_MODES.keys())
     if st.session_state.get("study_mode") not in mode_keys:
         st.session_state["study_mode"] = "overview"
-    selected_label = st.segmented_control(
-        "Study mode",
-        mode_labels,
-        key="study_mode_control",
-        default=STUDY_MODES[st.session_state["study_mode"]]["label"],
-    )
+
+    with st.container(key="study-mode-selector"):
+        st.markdown('<div class="study-mode-label">Study mode</div>', unsafe_allow_html=True)
+        selected_label = st.segmented_control(
+            "Study mode",
+            mode_labels,
+            key="study_mode_control",
+            default=STUDY_MODES[st.session_state["study_mode"]]["label"],
+            label_visibility="collapsed",
+            width="stretch",
+        )
     if selected_label in mode_labels:
         st.session_state["study_mode"] = mode_keys[mode_labels.index(selected_label)]
 
     description = STUDY_MODES[st.session_state["study_mode"]]["description"]
-    st.caption(description)
+    st.markdown(
+        f'<div class="study-mode-description">{html.escape(description)}</div>',
+        unsafe_allow_html=True,
+    )
 
     # Invalidate any cached study that no longer matches the current selection.
     _reset_study_on_change()
 
-    generate_clicked = st.button(
-        "✨ Generate study",
-        type="primary",
-        width="stretch",
-    )
+    left_button, center_button, right_button = st.columns([1, 2.1, 1])
+    with center_button:
+        generate_clicked = st.button(
+            "✨ Generate study",
+            type="primary",
+            width="stretch",
+        )
+    study_response_loading = st.empty()
 
     if generate_clicked:
-        with st.spinner("Preparing your Bible study..."):
+        _render_action_loading(
+            study_response_loading,
+            "Preparing your Bible study…",
+            "Please wait while Alai studies the selected passage.",
+        )
+        try:
             result = generate_study(passage, reference, st.session_state["study_mode"], language)
+        finally:
+            study_response_loading.empty()
         st.session_state["study_result"] = result
         st.session_state["study_result_key"] = _study_state_key()
 
@@ -737,4 +1302,31 @@ def page_bible_study():
             render_study_sections(result.sections)
 
 
-{"Home": page_home, "Bible Study": page_bible_study, "Bible Library": page_library, "Vent": page_vent}[st.session_state["page"]]()
+page = st.session_state["page"]
+page_key = page.lower().replace(" ", "-")
+with st.container(key=f"menu-content-{page_key}"):
+    {"Home": page_home, "Bible Study": page_bible_study, "Bible Library": page_library, "Vent": page_vent}[page]()
+
+st.html(
+    f"""<script>
+    (() => {{
+      const navigationId = {json.dumps(st.session_state.get("page_navigation_id", 0))};
+      if (window.__alaiLastNavigationId === navigationId) return;
+      window.__alaiLastNavigationId = navigationId;
+      requestAnimationFrame(() => requestAnimationFrame(() => {{
+        const main = document.querySelector('[data-testid="stMain"]');
+        if (main) main.scrollTo({{ top: 0, left: 0, behavior: "auto" }});
+        window.scrollTo({{ top: 0, left: 0, behavior: "auto" }});
+      }}));
+    }})();
+    </script>""",
+    unsafe_allow_javascript=True,
+)
+
+st.markdown(
+    '<footer class="app-footer">'
+    '<div class="app-footer-credit">Developed by kay-madelo</div>'
+    '<div class="app-footer-title">Alai</div>'
+    '</footer>',
+    unsafe_allow_html=True,
+)

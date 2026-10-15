@@ -98,6 +98,8 @@ def search_reference(df: pd.DataFrame, query: str):
         return None
     start = int(start) if start else verses[0]
     end = int(end) if end else (start if match.group(3) else verses[-1])
+    if start not in verses or end not in verses or end < start:
+        return None
     return book, chapter, start, end
 
 
