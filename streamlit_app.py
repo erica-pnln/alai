@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import html
 import inspect
@@ -20,6 +21,10 @@ from utils.ai_reflection import generate_reflection, generate_study, STUDY_MODES
 APP_NAME = "Alai"
 APP_MEANING = "Alai"
 APP_SUBTITLE = "AI-powered Digital Bible"
+_logo_jpg = Path(__file__).parent / "logo" / "logo.jpg"
+APP_LOGO_DATA_URI = (
+    "data:image/jpeg;base64," + base64.b64encode(_logo_jpg.read_bytes()).decode("ascii")
+)
 
 st.set_page_config(
     page_title=APP_NAME,
@@ -569,7 +574,7 @@ st.sidebar.markdown(
     '<div class="sidebar-brand">'
     '<div class="brand-row">'
     '<div class="brand-mark">'
-    '<img class="brand-logo" src="/app/static/alai_logo.png" alt="Alai logo">'
+    f'<img class="brand-logo" src="{APP_LOGO_DATA_URI}" alt="Alai logo">'
     '</div>'
     f'<div class="brand-meaning">{html.escape(APP_MEANING)}</div>'
     '</div>'
