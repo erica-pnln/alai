@@ -1333,3 +1333,99 @@ st.markdown(
     '</footer>',
     unsafe_allow_html=True,
 )
+
+st.html(
+    r"""
+    <style>
+      #alai-browser-prompt {
+        align-items: center;
+        background: rgba(20, 37, 29, .97);
+        border: 1px solid #c5a15b;
+        border-radius: 14px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, .42);
+        color: #f5f0e5;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem 1rem;
+        justify-content: space-between;
+        left: 50%;
+        max-width: min(40rem, calc(100vw - 1.5rem));
+        padding: .85rem 1rem;
+        position: fixed;
+        top: max(.75rem, env(safe-area-inset-top));
+        transform: translateX(-50%);
+        width: max-content;
+        z-index: 2147483000;
+      }
+      #alai-browser-prompt[hidden] { display: none; }
+      #alai-browser-prompt .alai-browser-copy { flex: 1 1 14rem; }
+      #alai-browser-prompt strong { color: #f7d58f; }
+      #alai-browser-prompt small { color: #d2cbb8; display: block; margin-top: .2rem; }
+      #alai-browser-prompt .alai-browser-actions { align-items: center; display: flex; gap: .55rem; }
+      #alai-browser-prompt a,
+      #alai-browser-prompt button {
+        border: 1px solid #c5a15b;
+        border-radius: 9px;
+        cursor: pointer;
+        font: inherit;
+        min-height: 40px;
+        padding: .45rem .75rem;
+        text-decoration: none;
+      }
+      #alai-browser-prompt a { background: #c5a15b; color: #14251d; font-weight: 700; }
+      #alai-browser-prompt button { background: transparent; color: #f5f0e5; }
+      @media (max-width: 540px) {
+        #alai-browser-prompt { align-items: stretch; }
+        #alai-browser-prompt .alai-browser-actions { justify-content: flex-end; }
+      }
+    </style>
+    <aside id="alai-browser-prompt" role="dialog" aria-label="Open Alai in your browser" hidden>
+      <div class="alai-browser-copy">
+        <strong>Open Alai in your browser?</strong>
+        <small id="alai-browser-hint">Continue in your device’s browser for the best experience.</small>
+      </div>
+      <div class="alai-browser-actions">
+        <a id="alai-open-browser" href="#">Open in browser</a>
+        <button id="alai-stay-here" type="button">Stay here</button>
+      </div>
+    </aside>
+    <script>
+      (() => {
+        const userAgent = navigator.userAgent || "";
+        const isFacebookBrowser = /FBAN|FBAV|FB_IAB|Messenger/i.test(userAgent);
+        if (!isFacebookBrowser) return;
+        try {
+          if (window.sessionStorage.getItem("alai-external-browser-dismissed") === "1") return;
+        } catch (_) {}
+
+        const prompt = document.getElementById("alai-browser-prompt");
+        const openLink = document.getElementById("alai-open-browser");
+        const stayButton = document.getElementById("alai-stay-here");
+        const hint = document.getElementById("alai-browser-hint");
+        if (!prompt || !openLink || !stayButton) return;
+
+        const pageUrl = window.location.href;
+        if (/Android/i.test(userAgent)) {
+          const browserUrl = new URL(pageUrl);
+          openLink.href = `intent://${browserUrl.host}${browserUrl.pathname}${browserUrl.search}${browserUrl.hash}`
+            + `#Intent;scheme=${browserUrl.protocol.slice(0, -1)};action=android.intent.action.VIEW;`
+            + "category=android.intent.category.BROWSABLE;end";
+        } else {
+          openLink.href = pageUrl;
+          openLink.target = "_blank";
+          openLink.rel = "noopener noreferrer";
+          if (/iPhone|iPad|iPod/i.test(userAgent) && hint) {
+            hint.textContent = "If it stays in Facebook, tap ••• and choose Open in browser.";
+          }
+        }
+
+        stayButton.addEventListener("click", () => {
+          try { window.sessionStorage.setItem("alai-external-browser-dismissed", "1"); } catch (_) {}
+          prompt.remove();
+        });
+        prompt.hidden = false;
+      })();
+    </script>
+    """,
+    unsafe_allow_javascript=True,
+)
