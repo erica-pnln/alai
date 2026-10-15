@@ -25,13 +25,6 @@ _logo_jpg = Path(__file__).parent / "logo" / "logo.jpg"
 APP_LOGO_DATA_URI = (
     "data:image/jpeg;base64," + base64.b64encode(_logo_jpg.read_bytes()).decode("ascii")
 )
-_pwa_icons = {}
-for _icon_size in (192, 512):
-    _icon_path = Path(__file__).parent / "static" / f"alai_icon_{_icon_size}.png"
-    _pwa_icons[_icon_size] = (
-        "data:image/png;base64," + base64.b64encode(_icon_path.read_bytes()).decode("ascii")
-    )
-
 st.set_page_config(
     page_title=APP_NAME,
     page_icon=str(Path(__file__).parent / "static" / "alai_logo.png"),
@@ -1329,7 +1322,7 @@ pwa_manifest = {
     "theme_color": "#14251D",
     "icons": [
         {
-            "src": _pwa_icons[size],
+            "src": f"/app/static/alai_icon_{size}.png",
             "sizes": f"{size}x{size}",
             "type": "image/png",
             "purpose": "any",
@@ -1423,6 +1416,7 @@ st.html(
         const appleIcon = document.createElement("link");
         appleIcon.rel = "apple-touch-icon";
         appleIcon.href = manifest.icons[1].src;
+        appleIcon.sizes = "512x512";
         document.head.appendChild(appleIcon);
         const appleCapable = document.createElement("meta");
         appleCapable.name = "apple-mobile-web-app-capable";
@@ -1457,21 +1451,27 @@ st.html(
         const isFacebook = /FBAN|FBAV|FB_IAB|Messenger/i.test(userAgent);
         installButton.addEventListener("click", async () => {{
           if (installPrompt) {{
-            installPrompt.prompt();
-            const choice = await installPrompt.userChoice;
+            const promptEvent = installPrompt;
             installPrompt = null;
-            if (choice && choice.outcome === "accepted") installButton.hidden = true;
+            try {{
+              await promptEvent.prompt();
+              const choice = await promptEvent.userChoice;
+              if (choice && choice.outcome === "accepted") installButton.hidden = true;
+            }} catch (error) {{
+              helpCopy.textContent = "Your browser could not open its install prompt. Try its Install option to add Alai with the Alai logo.";
+              help.hidden = false;
+            }}
             return;
           }}
 
           if (isIOS) {{
-            helpCopy.textContent = "In Safari, tap Share, then choose ‘Add to Home Screen’.";
+            helpCopy.textContent = "iPhone requires you to confirm installation in Safari. Open Alai in Safari and use its Share menu; the Alai logo is included.";
           }} else if (isFacebook) {{
-            helpCopy.textContent = "Open Alai in Chrome or your device’s browser first, then use its menu and choose ‘Install app’ or ‘Add to Home screen’.";
+            helpCopy.textContent = "Open Alai in Chrome or your device’s browser to install it. This in-app browser does not allow the install prompt.";
           }} else if (/Android/i.test(userAgent)) {{
-            helpCopy.textContent = "Open your browser menu (⋮) and choose ‘Install app’ or ‘Add to Home screen’.";
+            helpCopy.textContent = "This browser requires you to confirm installation from its menu. The Alai logo is included.";
           }} else {{
-            helpCopy.textContent = "In your browser menu or address bar, choose ‘Install Alai’ or ‘Install app’.";
+            helpCopy.textContent = "This browser requires you to confirm installation from its menu. The Alai logo is included.";
           }}
           help.hidden = false;
         }});
