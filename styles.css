@@ -1811,6 +1811,18 @@ section[data-testid="stSidebar"] .brand-row {
 section[data-testid="stSidebar"] .brand-subtag {
   text-align: center;
 }
+section[data-testid="stSidebar"] .brand-mark {
+  flex: 0 0 5rem;
+  height: 5rem;
+  margin-bottom: .2rem;
+  width: 5rem;
+}
+section[data-testid="stSidebar"] .brand-meaning {
+  font-size: clamp(2rem, 8vw, 2.35rem);
+}
+section[data-testid="stSidebar"] .brand-subtag {
+  margin-top: 0;
+}
 
 /* Session-only, floating verse-navigation finger. */
 @keyframes alai-guide-bob {

@@ -572,12 +572,10 @@ def move_library_chapter(direction: int):
 
 st.sidebar.markdown(
     '<div class="sidebar-brand">'
-    '<div class="brand-row">'
     '<div class="brand-mark">'
     f'<img class="brand-logo" src="{APP_LOGO_DATA_URI}" alt="Alai logo">'
     '</div>'
     f'<div class="brand-meaning">{html.escape(APP_MEANING)}</div>'
-    '</div>'
     f'<div class="brand-subtag">{html.escape(APP_SUBTITLE)}</div>'
     '</div>',
     unsafe_allow_html=True,
