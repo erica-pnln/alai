@@ -1351,7 +1351,7 @@ st.html(
         padding: .65rem 1rem;
         position: fixed;
         right: max(18px, env(safe-area-inset-right));
-        bottom: max(18px, env(safe-area-inset-bottom));
+        top: max(18px, env(safe-area-inset-top));
         width: auto;
         z-index: 2147482000;
         box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
@@ -1365,7 +1365,7 @@ st.html(
       #alai-install-button:focus-visible {{ outline: 3px solid #f7d58f; outline-offset: 3px; }}
       #alai-install-help {{
         background: transparent;
-        bottom: calc(max(18px, env(safe-area-inset-bottom)) + 58px);
+        top: calc(max(18px, env(safe-area-inset-top)) + 58px);
         display: block;
         padding: 0;
         position: fixed;
