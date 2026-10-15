@@ -1,4 +1,4 @@
-﻿"""Alai ASGI launcher with root-scoped PWA endpoints."""
+"""Alai ASGI launcher with root-scoped PWA endpoints."""
 
 from pathlib import Path
 
