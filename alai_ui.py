@@ -4,6 +4,7 @@ import html
 import inspect
 import json
 from datetime import datetime, timezone
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 import sys
 from typing import cast
@@ -18,13 +19,30 @@ APP_DIR = Path(__file__).resolve().parent
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-from utils.data_loader import load_bible
-from utils.scripture_retriever import (
+# `utils` is a generic top-level package name and can be confused with modules
+# already loaded by Streamlit or its dependencies. Load this project's helper
+# package under an app-specific name while keeping the existing files in `utils/`.
+HELPERS_PACKAGE = "alai_runtime_helpers"
+_helpers_dir = APP_DIR / "utils"
+if HELPERS_PACKAGE not in sys.modules:
+    _helpers_spec = spec_from_file_location(
+        HELPERS_PACKAGE,
+        _helpers_dir / "__init__.py",
+        submodule_search_locations=[str(_helpers_dir)],
+    )
+    if _helpers_spec is None or _helpers_spec.loader is None:
+        raise ImportError(f"Could not load Alai helpers from {_helpers_dir}")
+    _helpers_module = module_from_spec(_helpers_spec)
+    sys.modules[HELPERS_PACKAGE] = _helpers_module
+    _helpers_spec.loader.exec_module(_helpers_module)
+
+from alai_runtime_helpers.data_loader import load_bible
+from alai_runtime_helpers.scripture_retriever import (
     get_books, get_chapters, get_verse_numbers, get_passage,
     format_reference, search_reference, select_relevant_passage,
 )
-from utils.safety_checks import is_crisis_message, CRISIS_MESSAGE
-from utils.ai_reflection import generate_reflection, generate_study, STUDY_MODES
+from alai_runtime_helpers.safety_checks import is_crisis_message, CRISIS_MESSAGE
+from alai_runtime_helpers.ai_reflection import generate_reflection, generate_study, STUDY_MODES
 
 APP_NAME = "Alai"
 APP_MEANING = "Alai"
