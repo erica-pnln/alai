@@ -5,10 +5,18 @@ import inspect
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+import sys
 from typing import cast
 
 import streamlit as st
 import pandas as pd
+
+# Streamlit Cloud may execute this UI script from an ASGI app with a different
+# working directory. Put the repository root first so local modules (especially
+# our `utils` package) resolve consistently in every app session.
+APP_DIR = Path(__file__).resolve().parent
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
 
 from utils.data_loader import load_bible
 from utils.scripture_retriever import (
@@ -21,13 +29,13 @@ from utils.ai_reflection import generate_reflection, generate_study, STUDY_MODES
 APP_NAME = "Alai"
 APP_MEANING = "Alai"
 APP_SUBTITLE = "AI-powered Digital Bible"
-_logo_jpg = Path(__file__).parent / "logo" / "logo.jpg"
+_logo_jpg = APP_DIR / "logo" / "logo.jpg"
 APP_LOGO_DATA_URI = (
     "data:image/jpeg;base64," + base64.b64encode(_logo_jpg.read_bytes()).decode("ascii")
 )
 st.set_page_config(
     page_title=APP_NAME,
-    page_icon=str(Path(__file__).parent / "static" / "alai_logo.png"),
+    page_icon=str(APP_DIR / "static" / "alai_logo.png"),
     layout="wide",
     initial_sidebar_state="auto",
 )
@@ -48,14 +56,14 @@ PRIVACY_NOTICE = (
     "or emergency support."
 )
 
-css_file = Path(__file__).parent / "styles.css"
+css_file = APP_DIR / "styles.css"
 # Study mode centering CSS reload marker.
 if css_file.exists():
     st.markdown(f"<style>{css_file.read_text()}</style>", unsafe_allow_html=True)
 
 with st.sidebar.container(key="background-music-player"):
     st.audio(
-        str(Path(__file__).parent / "bg_music" / "leberch-worship-instrumental-587285.mp3"),
+        str(APP_DIR / "bg_music" / "leberch-worship-instrumental-587285.mp3"),
         format="audio/mp3",
         loop=True,
     )
