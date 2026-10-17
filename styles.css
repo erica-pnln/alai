@@ -2885,6 +2885,18 @@ div[data-testid="stDialog"] .kb-tilt {
 
 /* Add gentle mobile-only motion for scroll reveals and menu changes. */
 @media (max-width: 640px) {
+  section[data-testid="stMain"] .mark-scroll-reveal {
+    opacity: 0 !important;
+    transform: translateY(20px) !important;
+    transition: opacity .5s ease-out, transform .56s cubic-bezier(.2, .8, .2, 1) !important;
+    will-change: opacity, transform;
+  }
+
+  section[data-testid="stMain"] .mark-scroll-reveal.is-visible {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+  }
+
   .kb-anim section[data-testid="stMain"] .kb-reveal,
   .kb-anim section[data-testid="stMain"] .kb-fade {
     transition: opacity .42s ease-out, transform .48s cubic-bezier(.2, .8, .2, 1) !important;

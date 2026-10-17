@@ -331,8 +331,7 @@ if "unsafe_allow_javascript" in inspect.signature(st.html).parameters:
     st.html(
         """<script>
         (() => {
-          if (window.__markScrollReveal || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-          window.__markScrollReveal = true;
+          if (window.__markScrollRevealController || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
           const selector = [
             ".verse-of-day",
             ".featured-study",
@@ -349,64 +348,40 @@ if "unsafe_allow_javascript" in inspect.signature(st.html).parameters:
             ".st-key-study-passage-selectors",
             ".st-key-vent-options"
           ].join(",");
-          const pending = new Set();
-          let activeScrollTarget = null;
-          let scanScheduled = false;
+          const observer = "IntersectionObserver" in window
+            ? new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                  if (!entry.isIntersecting) return;
+                  entry.target.classList.add("is-visible");
+                  observer.unobserve(entry.target);
+                });
+              }, { threshold: 0.04, rootMargin: "0px 0px -8% 0px" })
+            : null;
 
-          function observeWithin(node) {
+          function register(element) {
+            element.classList.add("mark-scroll-reveal");
+            if (element.classList.contains("is-visible")) return;
+            if (observer) observer.observe(element);
+            else element.classList.add("is-visible");
+          }
+
+          function scan(node) {
             if (!(node instanceof Element)) return;
-            if (node.matches(selector)) {
-              node.classList.add("mark-scroll-reveal");
-              pending.add(node);
-            }
+            if (node.matches(selector)) register(node);
             node.querySelectorAll(selector).forEach((element) => {
-              element.classList.add("mark-scroll-reveal");
-              pending.add(element);
+              register(element);
             });
-            scanVisible();
           }
 
-          function scanVisible() {
-            if (scanScheduled) return;
-            scanScheduled = true;
-            window.setTimeout(() => {
-              scanScheduled = false;
-              const root = document.querySelector('[data-testid="stMain"]');
-              const bounds = root ? root.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
-              const revealLine = bounds.bottom - Math.min(54, (bounds.bottom - bounds.top) * 0.06);
-              for (const element of pending) {
-                if (!element.isConnected) {
-                  pending.delete(element);
-                  continue;
-                }
-                const rect = element.getBoundingClientRect();
-                if (rect.top <= revealLine && rect.bottom >= bounds.top + 24) {
-                  element.classList.add("is-visible");
-                  pending.delete(element);
-                }
-              }
-            }, 40);
-          }
-
-          function attachScrollListener() {
-            const root = document.querySelector('[data-testid="stMain"]');
-            const target = root || window;
-            if (target === activeScrollTarget) return;
-            if (activeScrollTarget) activeScrollTarget.removeEventListener("scroll", scanVisible);
-            activeScrollTarget = target;
-            activeScrollTarget.addEventListener("scroll", scanVisible, { passive: true });
-          }
-
-          observeWithin(document.body);
-          attachScrollListener();
-          document.addEventListener("scroll", scanVisible, { passive: true, capture: true });
-          window.addEventListener("resize", scanVisible, { passive: true });
+          scan(document.body);
           new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-              mutation.addedNodes.forEach(observeWithin);
-            }
-            attachScrollListener();
+            mutations.forEach((mutation) => {
+              mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === Node.ELEMENT_NODE) scan(node);
+              });
+            });
           }).observe(document.body, { childList: true, subtree: true });
+          window.__markScrollRevealController = { observer };
         })();
         </script>""",
         unsafe_allow_javascript=True,
