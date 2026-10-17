@@ -361,6 +361,108 @@ section[data-testid="stMain"] .mark-scroll-reveal.is-visible {
   margin: 1.2rem 0 .45rem;
 }
 
+/* Float the icon control over the Scripture card's upper-right corner. */
+.st-key-library-scripture-area {
+  position: relative;
+}
+.st-key-library_fullscreen_open_button {
+  position: absolute !important;
+  right: .8rem;
+  top: .55rem;
+  width: auto !important;
+  z-index: 2;
+}
+.st-key-library_fullscreen_open_button button {
+  width: 3rem !important;
+  min-height: 3rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(20, 37, 29, .72) !important;
+  box-shadow: none !important;
+  color: #f5f0e5 !important;
+  font-size: 1.8rem !important;
+  line-height: 1 !important;
+}
+.st-key-library_fullscreen_open_button button p {
+  font-size: 1.8rem !important;
+  line-height: 1 !important;
+}
+.st-key-library_fullscreen_open_button button:hover {
+  background: rgba(197, 161, 91, .2) !important;
+  color: #f7d58f !important;
+  transform: none !important;
+}
+.st-key-library_fullscreen_open_button button::before,
+.st-key-library_fullscreen_open_button button::after {
+  content: none !important;
+  display: none !important;
+}
+.st-key-library_fullscreen_close_icon {
+  position: fixed !important;
+  top: .65rem;
+  right: .75rem;
+  width: auto !important;
+  z-index: 10002;
+}
+.st-key-library_fullscreen_close_icon button {
+  width: 3rem !important;
+  min-height: 3rem !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(20, 37, 29, .78) !important;
+  box-shadow: none !important;
+  color: #f5f0e5 !important;
+  font-size: 1.45rem !important;
+  line-height: 1 !important;
+}
+.st-key-library_fullscreen_close_icon button p {
+  font-size: 1.45rem !important;
+  line-height: 1 !important;
+}
+.st-key-library_fullscreen_close_icon button::before,
+.st-key-library_fullscreen_close_icon button::after {
+  content: none !important;
+  display: none !important;
+}
+.mobile-explore-label {
+  display: none;
+}
+
+/* Full-screen Scripture reading dialog */
+div[data-testid="stDialog"] {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+div[data-testid="stDialog"] > div,
+div[data-testid="stDialog"] [role="dialog"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  background-color: #14251d !important;
+  background-image:
+    radial-gradient(ellipse at 12% 8%, rgba(61, 96, 66, .2), transparent 38%),
+    radial-gradient(ellipse at 88% 84%, rgba(197, 161, 91, .06), transparent 34%),
+    linear-gradient(135deg, #14251d 0%, #192d22 52%, #14251d 100%) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+div[data-testid="stDialog"] [role="dialog"] {
+  display: block !important;
+}
+div[data-testid="stDialog"] [data-testid="stDialogContent"] {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
 /* ---------- Jump-to-reference helper ---------- */
 .jump-help {
   background: var(--blue);
@@ -1447,7 +1549,238 @@ section[data-testid="stSidebar"] {
   }
 }
 
+@media (min-width: 641px) {
+  .st-key-mobile-menu {
+    display: none !important;
+  }
+
+  .st-key-home-content {
+    display: none !important;
+  }
+
+  body:has(.mobile-menu-state[data-page="home"]) .st-key-home-content {
+    display: block !important;
+  }
+}
+
 @media (max-width: 640px) {
+  .st-key-mobile-back-button,
+  .st-key-mobile_back_to_menu {
+    display: block !important;
+    position: fixed !important;
+    top: calc(4.25rem + env(safe-area-inset-top)) !important;
+    bottom: auto !important;
+    left: .85rem !important;
+    right: auto !important;
+    z-index: 2147483647 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin: 0 !important;
+  }
+
+  .st-key-mobile_back_to_menu button {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+    height: 2.75rem !important;
+    min-height: 2.75rem !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .4) !important;
+  }
+
+  .st-key-mobile_back_to_menu button p {
+    display: block !important;
+    font-size: 0 !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+  }
+
+  .st-key-mobile_back_to_menu button [data-testid="stIconMaterial"] {
+    font-size: 1.6rem !important;
+    line-height: 1 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  section[data-testid="stSidebar"] {
+    display: none !important;
+  }
+
+  [data-testid="stSidebarCollapsedControl"],
+  [data-testid="stExpandSidebarButton"] {
+    display: none !important;
+  }
+
+  .mobile-menu-state {
+    display: none !important;
+  }
+
+  .st-key-mobile-menu {
+    padding: 1rem .65rem 1.5rem;
+  }
+
+  .st-key-mobile-menu-actions {
+    display: none !important;
+  }
+
+  body:has(.mobile-menu-state[data-state="open"]) .st-key-home-content {
+    display: block !important;
+  }
+
+  body:has(.mobile-menu-state[data-state="closed"]) .st-key-home-content {
+    display: none !important;
+  }
+
+  body:has(.mobile-menu-state[data-state="closed"]) .st-key-mobile-menu {
+    display: none !important;
+  }
+
+  body:has(.mobile-menu-state[data-state="open"]) .st-key-page-content {
+    display: none !important;
+  }
+
+  .st-key-mobile-back-button {
+    margin: .25rem 0 .75rem;
+  }
+
+  .st-key-mobile-back-button button {
+    min-height: 2.75rem;
+  }
+
+  .st-key-mobile-menu-actions [data-testid="stHorizontalBlock"] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: .65rem;
+  }
+
+  .st-key-mobile-menu-actions [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex: 1 1 calc(50% - .35rem) !important;
+    width: calc(50% - .35rem) !important;
+  }
+
+  .st-key-mobile-menu-actions .stButton {
+    margin-bottom: .6rem;
+  }
+
+  .st-key-mobile-menu-actions .stButton > button {
+    min-height: 3.15rem;
+    font-size: .78rem !important;
+    font-weight: 700;
+    border-radius: 14px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .st-key-mobile-menu-actions .stButton > button p,
+  .st-key-home-actions .stButton > button p {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+
+  .st-key-mobile-menu-actions .stButton > button::before,
+  .st-key-mobile-menu-actions .stButton > button::after {
+    font-size: .82rem;
+  }
+
+  .st-key-mobile-menu-actions .stButton > button::before {
+    left: .3rem;
+  }
+
+  .st-key-mobile-menu-actions .stButton > button::after {
+    right: .3rem;
+  }
+
+  .mobile-menu-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: .35rem 0 .75rem;
+    margin-bottom: .35rem;
+  }
+
+  .mobile-menu-logo-frame {
+    position: relative;
+    width: 7.5rem;
+    height: 7.5rem;
+    margin: 0 auto .45rem;
+    overflow: hidden;
+    border-radius: 50%;
+  }
+
+  .mobile-menu-logo {
+    display: block;
+    position: absolute !important;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    object-fit: cover !important;
+    transform: scale(1.14);
+  }
+
+  .mobile-menu-brand {
+    font-family: 'Orbitron', 'Share Tech Mono', 'DM Mono', monospace;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: .04em;
+    color: #f7d58f;
+  }
+
+  .mobile-menu-subtitle {
+    font-size: .82rem;
+    color: #e6dcc7;
+    text-align: center;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    opacity: .9;
+  }
+
+  .mobile-menu-intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3rem;
+    margin: 1rem 0 .5rem;
+    padding: 1rem;
+    border: 1px solid rgba(197, 161, 91, .6);
+    border-radius: 13px;
+    background: rgba(33, 58, 44, .9);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, .3);
+    color: #f4fffb;
+    text-align: center;
+  }
+
+  .mobile-menu-intro .sidebar-intro-copy {
+    font-size: calc(.985rem - 2px);
+    font-style: italic;
+    line-height: 1.5;
+    max-width: 100%;
+  }
+
+  .mobile-menu-intro .sidebar-intro-tagline {
+    margin-top: .2rem;
+    color: #f7d58f;
+    font-size: calc(.905rem - 2px);
+    font-style: italic;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .st-key-mobile-back-button button {
+    font-size: .85rem !important;
+  }
+
   .main .block-container {
     padding: 4.25rem .9rem 2.5rem;
   }
@@ -1488,6 +1821,10 @@ section[data-testid="stSidebar"] {
   .st-key-home-actions [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child {
     flex-basis: 100% !important;
     width: 100% !important;
+  }
+
+  .st-key-home-actions .stButton > button {
+    font-size: .8rem !important;
   }
 
   .st-key-library-continue-reading [data-testid="stHorizontalBlock"] {
@@ -1964,4 +2301,525 @@ div[data-testid="stElementContainer"]:has(.st-key-library-passage-selectors),
     display: flex !important;
     justify-content: center !important;
   }
+}
+
+/* Botanical button accents in Alai's forest-green and antique-gold palette. */
+section[data-testid="stMain"] .stButton > button,
+section[data-testid="stSidebar"] .stButton > button {
+  isolation: isolate;
+  overflow: visible;
+  position: relative;
+  border: 1px solid rgba(197, 161, 91, .62);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #294533, #1a3024 72%);
+  box-shadow: inset 0 1px rgba(255, 249, 235, .07), 0 5px 14px rgba(0, 0, 0, .2);
+  color: #f5f0e5;
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+section[data-testid="stMain"] .stButton > button[kind="primary"],
+section[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+  background: linear-gradient(145deg, #9c7840, #70552e 70%, #4e482d);
+  border-color: #e0c27d;
+  color: #fff9eb;
+}
+
+.stButton > button::before,
+.stButton > button::after {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  width: 1rem;
+  height: .58rem;
+  border: 1px solid var(--leaf-vein, #638452);
+  background:
+    linear-gradient(145deg, transparent 47%, var(--leaf-vein, #638452) 49%, var(--leaf-vein, #638452) 52%, transparent 54%),
+    linear-gradient(135deg, var(--leaf-light, #acd18a), var(--leaf-color, #4d7c46) 72%);
+  border-radius: 75% 0 75% 0;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: 0 0 7px rgba(197, 161, 91, .35);
+  transition: filter .2s ease, transform .2s ease;
+}
+
+.stButton > button::before {
+  content: "";
+  top: var(--leaf-a-top, -.34rem);
+  right: var(--leaf-a-right, auto);
+  bottom: var(--leaf-a-bottom, auto);
+  left: var(--leaf-a-left, 18%);
+  transform: rotate(var(--leaf-a-angle, -35deg));
+}
+
+.stButton > button::after {
+  content: "";
+  top: var(--leaf-b-top, auto);
+  right: var(--leaf-b-right, 18%);
+  bottom: var(--leaf-b-bottom, -.34rem);
+  left: var(--leaf-b-left, auto);
+  transform: rotate(var(--leaf-b-angle, 145deg));
+}
+
+section[data-testid="stMain"] .stButton > button:hover,
+section[data-testid="stSidebar"] .stButton > button:hover {
+  border-color: #f0d58f;
+  box-shadow: inset 0 1px rgba(255, 249, 235, .1), 0 8px 19px rgba(0, 0, 0, .3);
+  color: #fff9eb;
+  transform: translateY(-2px);
+}
+
+section[data-testid="stMain"] .stButton > button:hover::before,
+section[data-testid="stMain"] .stButton > button:hover::after,
+section[data-testid="stSidebar"] .stButton > button:hover::before,
+section[data-testid="stSidebar"] .stButton > button:hover::after {
+  filter: brightness(1.25);
+}
+
+section[data-testid="stMain"] .stButton > button:focus-visible,
+section[data-testid="stSidebar"] .stButton > button:focus-visible {
+  outline: 2px solid #f0d58f;
+  outline-offset: 3px;
+}
+
+.st-key-library_to_verse_guide .st-key-library_tutorial_go button::before,
+.st-key-library_to_verse_guide .st-key-library_tutorial_go button::after {
+  content: none !important;
+}
+
+/* Leaf accents use varied edge positions so each action has its own detail. */
+.st-key-mobile_menu_bible_study,
+.st-key-sidebar_nav_bible_study {
+  --leaf-a-left: 72%;
+  --leaf-a-top: -.38rem;
+  --leaf-b-right: -.38rem;
+  --leaf-b-bottom: 24%;
+  --leaf-b-angle: 55deg;
+}
+.st-key-mobile_menu_bible_library,
+.st-key-sidebar_nav_bible_library {
+  --leaf-a-left: -.35rem;
+  --leaf-a-top: 58%;
+  --leaf-a-angle: 35deg;
+  --leaf-b-right: 22%;
+  --leaf-b-bottom: -.38rem;
+  --leaf-b-angle: 205deg;
+  --leaf-color: #91a978;
+  --leaf-light: #d2dba6;
+}
+.st-key-mobile_menu_vent,
+.st-key-sidebar_nav_vent {
+  --leaf-a-left: 22%;
+  --leaf-a-top: -.38rem;
+  --leaf-a-angle: -55deg;
+  --leaf-b-right: -.38rem;
+  --leaf-b-bottom: 66%;
+  --leaf-b-angle: 25deg;
+  --leaf-color: #4b7545;
+  --leaf-light: #a6c981;
+}
+.st-key-sidebar_nav_home {
+  --leaf-a-left: -.35rem;
+  --leaf-a-top: 22%;
+  --leaf-a-angle: 55deg;
+  --leaf-b-right: 26%;
+  --leaf-b-bottom: -.38rem;
+  --leaf-b-angle: 215deg;
+}
+.st-key-home_action_study {
+  --leaf-a-left: 24%;
+  --leaf-a-top: -.38rem;
+  --leaf-a-angle: -15deg;
+  --leaf-b-right: -.38rem;
+  --leaf-b-bottom: 22%;
+  --leaf-b-angle: 35deg;
+}
+.st-key-home_action_library {
+  --leaf-a-left: -.35rem;
+  --leaf-a-top: 20%;
+  --leaf-a-angle: 20deg;
+  --leaf-b-right: 18%;
+  --leaf-b-bottom: -.38rem;
+  --leaf-b-angle: 195deg;
+  --leaf-color: #91a978;
+  --leaf-light: #d2dba6;
+}
+.st-key-home_action_vent {
+  --leaf-a-left: 78%;
+  --leaf-a-top: -.38rem;
+  --leaf-a-angle: -60deg;
+  --leaf-b-right: -.38rem;
+  --leaf-b-bottom: 60%;
+  --leaf-b-angle: 15deg;
+  --leaf-color: #4b7545;
+  --leaf-light: #a6c981;
+}
+.st-key-home_verse_read {
+  --leaf-a-left: 35%;
+  --leaf-a-top: -.38rem;
+  --leaf-b-right: -.38rem;
+  --leaf-b-bottom: 35%;
+  --leaf-b-angle: 20deg;
+  --leaf-color: #91a978;
+  --leaf-light: #d2dba6;
+}
+.st-key-home_verse_explore {
+  --leaf-a-left: -.35rem;
+  --leaf-a-top: 68%;
+  --leaf-a-angle: 20deg;
+  --leaf-b-right: 24%;
+  --leaf-b-bottom: -.38rem;
+  --leaf-b-angle: 195deg;
+}
+.st-key-home_featured_study {
+  --leaf-a-left: 82%;
+  --leaf-a-top: -.38rem;
+  --leaf-a-angle: -60deg;
+  --leaf-b-right: -.38rem;
+  --leaf-b-bottom: 64%;
+  --leaf-b-angle: 25deg;
+  --leaf-color: #4b7545;
+  --leaf-light: #a6c981;
+}
+.st-key-library_prev_chapter {
+  --leaf-a-left: 25%;
+  --leaf-a-top: -.35rem;
+  --leaf-a-angle: -20deg;
+  --leaf-b-right: -.35rem;
+  --leaf-b-bottom: 25%;
+  --leaf-b-angle: 30deg;
+}
+.st-key-library_prev_verse {
+  --leaf-a-left: -.3rem;
+  --leaf-a-top: 35%;
+  --leaf-a-angle: 15deg;
+  --leaf-b-right: 20%;
+  --leaf-b-bottom: -.35rem;
+  --leaf-b-angle: 195deg;
+  --leaf-color: #91a978;
+  --leaf-light: #d2dba6;
+}
+.st-key-library_next_verse {
+  --leaf-a-left: 74%;
+  --leaf-a-top: -.35rem;
+  --leaf-a-angle: -45deg;
+  --leaf-b-right: -.35rem;
+  --leaf-b-bottom: 62%;
+  --leaf-b-angle: 15deg;
+  --leaf-color: #91a978;
+  --leaf-light: #d2dba6;
+}
+.st-key-library_next_chapter {
+  --leaf-a-left: -.3rem;
+  --leaf-a-top: 70%;
+  --leaf-a-angle: 28deg;
+  --leaf-b-right: 28%;
+  --leaf-b-bottom: -.35rem;
+  --leaf-b-angle: 210deg;
+  --leaf-color: #4b7545;
+  --leaf-light: #a6c981;
+}
+.st-key-vent_guidance_submit {
+  --leaf-a-left: 16%;
+  --leaf-a-top: -.4rem;
+  --leaf-a-angle: -55deg;
+  --leaf-b-right: -.4rem;
+  --leaf-b-bottom: 28%;
+  --leaf-b-angle: 30deg;
+  --leaf-color: #4b7545;
+  --leaf-light: #a6c981;
+}
+.st-key-study_generate {
+  --leaf-a-left: -.35rem;
+  --leaf-a-top: 54%;
+  --leaf-a-angle: 25deg;
+  --leaf-b-right: 15%;
+  --leaf-b-bottom: -.35rem;
+  --leaf-b-angle: 205deg;
+}
+.st-key-mobile_back_to_menu {
+  --leaf-a-left: 80%;
+  --leaf-a-top: -.35rem;
+  --leaf-a-angle: -25deg;
+  --leaf-b-right: -.35rem;
+  --leaf-b-bottom: 52%;
+  --leaf-b-angle: 25deg;
+  --leaf-color: #91a978;
+  --leaf-light: #d2dba6;
+}
+
+@media (min-width: 641px) {
+  .st-key-mobile-back-button,
+  .st-key-mobile_back_to_menu {
+    display: none !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .st-key-library-continue-reading button::before,
+  .st-key-library-continue-reading button::after {
+    width: .78rem;
+    height: .44rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  section[data-testid="stMain"] .stButton > button,
+  section[data-testid="stSidebar"] .stButton > button {
+    transition: none !important;
+  }
+}
+
+/* Keep the Scripture reader comfortable and usable on narrow phone screens. */
+@media (max-width: 640px) {
+  html,
+  body,
+  #root,
+  .stApp,
+  [data-testid="stAppViewContainer"] {
+    width: 100% !important;
+    max-width: 100%;
+    min-width: 0 !important;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-image:
+      radial-gradient(ellipse at 12% 8%, rgba(61, 96, 66, .22), transparent 38%),
+      radial-gradient(ellipse at 88% 84%, rgba(197, 161, 91, .07), transparent 34%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 320'%3E%3Cg fill='%23C5A15B' fill-opacity='.035' stroke='%23C5A15B' stroke-opacity='.22' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M35 292C91 251 121 208 150 153S207 58 282 25' fill='none'/%3E%3Cpath d='M88 247c-5-27-25-46-53-51 5 27 23 45 53 51Z'/%3E%3Cpath d='M117 207c-2-27-19-48-46-57 2 28 18 48 46 57Z'/%3E%3Cpath d='M144 163c2-26-12-49-37-62-2 28 11 49 37 62Z'/%3E%3Cpath d='M170 119c8-25 1-51-19-70-10 26-5 50 19 70Z'/%3E%3Cpath d='M196 80c15-22 17-49 4-73-17 22-19 47-4 73Z'/%3E%3Cpath d='M101 237c9-26 31-42 60-42-9 27-30 43-60 42Z'/%3E%3Cpath d='M132 190c12-25 36-38 64-34-12 26-34 39-64 34Z'/%3E%3Cpath d='M158 146c16-23 42-32 69-23-17 23-41 33-69 23Z'/%3E%3Cpath d='M184 105c19-19 46-24 71-11-20 20-46 25-71 11Z'/%3E%3C/g%3E%3C/svg%3E"),
+      linear-gradient(135deg, #14251d 0%, #192d22 52%, #14251d 100%) !important;
+    background-size: auto, auto, 360px 360px, auto !important;
+  }
+
+  section[data-testid="stMain"],
+  .main,
+  .main .block-container,
+  [data-testid="stMainBlockContainer"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .main .block-container {
+    padding-left: .75rem !important;
+    padding-right: .75rem !important;
+  }
+
+  .mobile-explore-label {
+    display: block;
+    margin: 0 0 .55rem;
+    color: #f7d58f;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .st-key-library-scripture-area {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .scripture-card {
+    margin: .45rem 0 .8rem;
+    padding: 1rem .9rem;
+  }
+
+  .scripture-card .card-heading {
+    padding-right: 2.6rem;
+    font-size: .98rem;
+  }
+
+  .scripture-ref {
+    font-size: 1.28rem;
+  }
+
+  .scripture {
+    font-size: 1.08rem;
+    line-height: 1.62;
+    overflow-wrap: anywhere;
+  }
+
+  .st-key-library_fullscreen_open_button {
+    right: .45rem;
+    top: .4rem;
+  }
+
+  .st-key-library_fullscreen_open_button button {
+    width: 2.7rem !important;
+    min-height: 2.7rem !important;
+  }
+
+  div[data-testid="stDialog"] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  div[data-testid="stDialog"] > div,
+  div[data-testid="stDialog"] [role="dialog"] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  div[data-testid="stDialog"] [data-testid="stDialogContent"] {
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  div[data-testid="stDialog"] .scripture-card {
+    padding: 1rem .9rem;
+  }
+
+  .st-key-library_fullscreen_close_icon {
+    top: max(.4rem, env(safe-area-inset-top));
+    right: max(.45rem, env(safe-area-inset-right));
+  }
+
+}
+
+.stButton > button::before,
+.stButton > button::after {
+  content: none !important;
+  display: none !important;
+}
+
+body::before {
+  background-image: none !important;
+}
+
+/* Let the forest backdrop show through the app's content panels. */
+:root {
+  --panel-glass: rgba(20, 37, 29, .42);
+  --panel-glass-border: rgba(106, 129, 91, .48);
+}
+
+.page-title-container,
+.home-hero,
+.featured-study,
+.verse-of-day,
+.scripture-card,
+.result-card,
+.passage-summary,
+.jump-help,
+.notice,
+.mobile-menu-intro,
+.sidebar-intro,
+.sidebar-disclaimer,
+.mark-action-loading,
+[data-testid="stSidebar"] .sidebar-brand,
+div[data-testid="stVerticalBlockBorderWrapper"] {
+  background: var(--panel-glass) !important;
+  border-color: var(--panel-glass-border);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .22);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+section[data-testid="stSidebar"] {
+  background: rgba(20, 37, 29, .72) !important;
+}
+
+[data-testid="stSidebar"] [role="radio"] {
+  background: rgba(20, 37, 29, .3);
+}
+
+[data-testid="stSidebar"] [role="radio"][aria-checked="true"] {
+  background: rgba(41, 69, 51, .62);
+}
+
+@media (max-width: 640px) {
+  .st-key-library-passage-selectors [data-testid="stWidgetLabel"] p,
+  .st-key-library-passage-selectors input[role="combobox"],
+  .st-key-study-passage-selectors [data-testid="stWidgetLabel"] p,
+  .st-key-study-passage-selectors input[role="combobox"] {
+    font-size: 1rem !important;
+  }
+
+  .st-key-mobile-back-button {
+    position: fixed !important;
+    left: .85rem;
+    top: calc(.65rem + env(safe-area-inset-top));
+    bottom: auto;
+    z-index: 10001;
+    margin: 0 !important;
+  }
+
+  .st-key-mobile_back_to_menu button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    width: 2.75rem !important;
+    height: 2.75rem !important;
+    min-height: 2.75rem !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    border: 2px solid #c5a15b !important;
+    background: #1a3024 !important;
+    color: #f7d58f !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .4) !important;
+  }
+
+  .st-key-mobile_back_to_menu button p {
+    display: none !important;
+  }
+
+  .st-key-mobile_back_to_menu button [data-testid="stIconMaterial"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    color: #f7d58f !important;
+    font-size: 1.5rem !important;
+    line-height: 1 !important;
+    transform: translateX(4px);
+  }
+}
+
+/* Let the botanical canvas show through every app content surface. */
+div[data-testid="stVerticalBlockBorderWrapper"],
+.page-title-container,
+.featured-study,
+.home-hero,
+.verse-of-day,
+.scripture-card,
+.result-card,
+.passage-summary,
+.jump-help,
+.notice,
+.mobile-menu-intro,
+.sidebar-intro,
+.sidebar-disclaimer,
+.mark-action-loading,
+[data-testid="stSidebar"] .sidebar-brand {
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+section[data-testid="stSidebar"] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+div[data-testid="stDialog"] > div,
+div[data-testid="stDialog"] [role="dialog"] {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }

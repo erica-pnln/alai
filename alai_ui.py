@@ -47,9 +47,9 @@ from alai_runtime_helpers.ai_reflection import generate_reflection, generate_stu
 APP_NAME = "Alai"
 APP_MEANING = "Alai"
 APP_SUBTITLE = "AI-powered Digital Bible"
-_logo_jpg = APP_DIR / "logo" / "logo.jpg"
+_logo_png = APP_DIR / "static" / "alai_logo.png"
 APP_LOGO_DATA_URI = (
-    "data:image/jpeg;base64," + base64.b64encode(_logo_jpg.read_bytes()).decode("ascii")
+    "data:image/png;base64," + base64.b64encode(_logo_png.read_bytes()).decode("ascii")
 )
 st.set_page_config(
     page_title=APP_NAME,
@@ -77,7 +77,7 @@ PRIVACY_NOTICE = (
 css_file = APP_DIR / "styles.css"
 # Study mode centering CSS reload marker.
 if css_file.exists():
-    st.markdown(f"<style>{css_file.read_text()}</style>", unsafe_allow_html=True)
+    st.markdown(f"<style>{css_file.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
 
 with st.sidebar.container(key="background-music-player"):
     st.audio(
@@ -422,6 +422,8 @@ is_placeholder = status != "ok"
 
 if "page" not in st.session_state:
     st.session_state["page"] = "Home"
+if "mobile_menu_open" not in st.session_state:
+    st.session_state["mobile_menu_open"] = True
 if "navigation" not in st.session_state:
     st.session_state["navigation"] = NAV_LABELS[st.session_state["page"]]
 
@@ -429,7 +431,13 @@ if "navigation" not in st.session_state:
 def go(page: str):
     st.session_state["page"] = page
     st.session_state["navigation"] = NAV_LABELS[page]
+    st.session_state["mobile_menu_open"] = False
     st.session_state["page_navigation_id"] = st.session_state.get("page_navigation_id", 0) + 1
+
+
+def show_mobile_menu():
+    go("Home")
+    st.session_state["mobile_menu_open"] = True
 
 
 def _daily_seed(date: str) -> int:
@@ -656,14 +664,47 @@ def render_passage(passage_df, reference: str, testament: str):
     )
     st.markdown(
         '<section class="scripture-card">'
-        '<div class="card-heading">📖 Original Scripture</div>'
+        f'<div class="card-heading">\U0001f4d6 Original Scripture</div>'
         f'<div class="scripture-ref">{html.escape(reference)}</div>'
-        f'<div class="scripture-meta">{html.escape(testament)} · {html.escape(str(translation))}</div>'
+        f'<div class="scripture-meta">{html.escape(testament)} \u00b7 {html.escape(str(translation))}</div>'
         f'<div class="scripture">{verses}</div>'
-        '<div class="card-label">Shown directly from the verified Bible dataset.</div>'
         '</section>',
         unsafe_allow_html=True,
     )
+
+
+@st.dialog("\U0001f4d6 Original Scripture", width="large", dismissible=False)
+def render_fullscreen_passage(passage_df, reference: str, testament: str, verses, start: int):
+    """Show the selected passage in a viewport-filling reading dialog."""
+    if st.button(
+        "\u2715",
+        key="library_fullscreen_close_icon",
+        help="Close full-screen reading",
+        type="tertiary",
+    ):
+        st.session_state["library_fullscreen_open"] = False
+        st.rerun()
+    render_passage(passage_df, reference, testament)
+    st.markdown('<div class="library-nav-label">\U0001f4da Continue Reading</div>', unsafe_allow_html=True)
+    _render_library_reading_buttons(verses, start, key_prefix="library_fullscreen")
+    if st.button("Close full-screen reading", key="library_fullscreen_close", width="stretch"):
+        st.session_state["library_fullscreen_open"] = False
+        st.rerun()
+
+
+def _render_library_reading_buttons(verses, start: int, *, key_prefix: str) -> None:
+    """Render the verse and chapter navigation controls."""
+    c1, c2, c3, c4 = st.columns(4)
+    c1.button("\u23ee\ufe0f Prev chapter", key=f"{key_prefix}_prev_chapter", width="stretch",
+              on_click=move_library_chapter, args=(-1,))
+    c2.button("\u25c0\ufe0f Prev verse", key=f"{key_prefix}_prev_verse",
+              disabled=verses.index(start) == 0, width="stretch",
+              on_click=move_library_verse, args=(-1,))
+    c3.button("\u25b6\ufe0f Next verse", key=f"{key_prefix}_next_verse",
+              disabled=verses.index(start) >= len(verses) - 1, width="stretch",
+              on_click=move_library_verse, args=(1,))
+    c4.button("\u23ed\ufe0f Next chapter", key=f"{key_prefix}_next_chapter", width="stretch",
+              on_click=move_library_chapter, args=(1,))
 
 
 def render_result_card(title: str, icon: str, content: str, variant: str, label: str = ""):
@@ -712,10 +753,20 @@ def page_home():
         unsafe_allow_html=True,
     )
     with st.container(key="home-actions"):
+        st.markdown('<div class="mobile-explore-label">Explore</div>', unsafe_allow_html=True)
         btn1, btn2, btn3 = st.columns(3)
-        btn1.button("📜 Start Bible Study", type="primary", width="stretch", on_click=go, args=("Bible Study",))
-        btn2.button("📖 Read the Bible", width="stretch", on_click=go, args=("Bible Library",))
-        btn3.button("💛 Vent Your Heart", width="stretch", on_click=go, args=("Vent",))
+        btn1.button(
+            "📜 Start Bible Study", key="home_action_study", type="primary",
+            width="stretch", on_click=go, args=("Bible Study",),
+        )
+        btn2.button(
+            "📖 Read the Bible", key="home_action_library",
+            width="stretch", on_click=go, args=("Bible Library",),
+        )
+        btn3.button(
+            "💛 Vent Your Heart", key="home_action_vent",
+            width="stretch", on_click=go, args=("Vent",),
+        )
 
     st.markdown('<div class="section-rule"></div>', unsafe_allow_html=True)
 
@@ -740,12 +791,14 @@ def page_home():
             v1, v2 = st.columns([1, 1])
             v1.button(
                 "📖 Read full passage",
+                key="home_verse_read",
                 width="stretch",
                 on_click=open_in_library,
                 args=(row["book"], int(row["chapter"]), int(row["verse"]), int(row["verse"])),
             )
             v2.button(
                 "🔎 Explore this verse",
+                key="home_verse_explore",
                 type="primary",
                 width="stretch",
                 on_click=explore_in_study,
@@ -778,6 +831,7 @@ def page_home():
             )
             st.button(
                 "✨ Study this passage",
+                key="home_featured_study",
                 type="primary",
                 width="stretch",
                 on_click=explore_in_study,
@@ -930,7 +984,15 @@ def page_library():
             )
         try:
             passage = get_passage(df, book, chapter, start, end)
-            render_passage(passage, format_reference(book, chapter, start, end), testament)
+            with st.container(key="library-scripture-area"):
+                render_passage(passage, format_reference(book, chapter, start, end), testament)
+                if st.button(
+                    "\u26f6",
+                    key="library_fullscreen_open_button",
+                    help="Expand Scripture to full screen",
+                    type="tertiary",
+                ):
+                    st.session_state["library_fullscreen_open"] = True
         finally:
             action_loading.empty()
             st.session_state.pop("library_loading_message", None)
@@ -938,34 +1000,12 @@ def page_library():
                 jump_loading.empty()
 
         # Reading flow: prev/next verse AND prev/next chapter
-        st.markdown('<div class="library-nav-label">📚 Continue reading</div>', unsafe_allow_html=True)
+        st.markdown('<div class="library-nav-label">\U0001f4da Continue Reading</div>', unsafe_allow_html=True)
         with st.container(key="library-continue-reading"):
-            c1, c2, c3, c4 = st.columns(4)
-            c1.button(
-                "⏮️ Prev chapter",
-                width="stretch",
-                on_click=move_library_chapter,
-                args=(-1,),
-            )
-            c2.button(
-                "◀️ Prev verse",
-                disabled=verses.index(start) == 0,
-                width="stretch",
-                on_click=move_library_verse,
-                args=(-1,),
-            )
-            c3.button(
-                "▶️ Next verse",
-                disabled=verses.index(start) >= len(verses) - 1,
-                width="stretch",
-                on_click=move_library_verse,
-                args=(1,),
-            )
-            c4.button(
-                "⏭️ Next chapter",
-                width="stretch",
-                on_click=move_library_chapter,
-                args=(1,),
+            _render_library_reading_buttons(verses, start, key_prefix="library")
+        if st.session_state.get("library_fullscreen_open"):
+            render_fullscreen_passage(
+                passage, format_reference(book, chapter, start, end), testament, verses, start
             )
         if st.session_state.get("library_notice"):
             st.info(st.session_state["library_notice"])
@@ -994,6 +1034,7 @@ def page_vent():
         button_left, button_center, button_right = st.columns([1, 1.2, 1])
         guidance_clicked = button_center.button(
             "🙏 I Need His Guidance",
+            key="vent_guidance_submit",
             type="primary",
             width="stretch",
         )
@@ -1277,6 +1318,7 @@ def page_bible_study():
     with center_button:
         generate_clicked = st.button(
             "✨ Generate study",
+            key="study_generate",
             type="primary",
             width="stretch",
         )
@@ -1308,10 +1350,70 @@ def page_bible_study():
             render_study_sections(result.sections)
 
 
+def render_mobile_menu():
+    """Show a dedicated menu screen on small screens before the selected page loads."""
+    menu_state = "open" if st.session_state.get("mobile_menu_open", True) else "closed"
+    home_state = st.session_state["page"].lower().replace(" ", "-")
+    st.markdown(
+        f'<span class="mobile-menu-state" data-state="{menu_state}" '
+        f'data-page="{home_state}"></span>',
+        unsafe_allow_html=True,
+    )
+    with st.container(key="mobile-menu"):
+        st.markdown(
+            '<div class="mobile-menu-header">'
+            '<div class="mobile-menu-logo-frame">'
+            f'<img class="mobile-menu-logo" src="{APP_LOGO_DATA_URI}" alt="Alai logo">'
+            '</div>'
+            '<div class="mobile-menu-brand">Alai</div>'
+            '<div class="mobile-menu-subtitle">AI-powered Digital Bible</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        menu_pages = [page for page in PAGES if page != "Home"]
+        with st.container(key="mobile-menu-actions"):
+            nav_cols = st.columns(2)
+            for i, page in enumerate(menu_pages):
+                with nav_cols[i % 2]:
+                    st.button(
+                        NAV_LABELS[page],
+                        key=f"mobile_menu_{page.lower().replace(' ', '_')}",
+                        type="primary" if st.session_state["page"] == page else "secondary",
+                        width="stretch",
+                        on_click=go,
+                        args=(page,),
+                    )
+        st.markdown(
+            '<div class="mobile-menu-intro">'
+            '<span class="sidebar-intro-copy">Offer your life to Him</span>'
+            '<span class="sidebar-intro-copy">Surrender all to Him</span>'
+            '<span class="sidebar-intro-tagline">He has everything, yet He wants you &#129309;</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+
 page = st.session_state["page"]
+render_mobile_menu()
+if page != "Home":
+    with st.container(key="mobile-back-button"):
+        st.button(
+            "Home",
+            key="mobile_back_to_menu",
+            icon=":material/home:",
+            help="Home",
+            type="tertiary",
+            width="content",
+            on_click=show_mobile_menu,
+        )
 page_key = page.lower().replace(" ", "-")
-with st.container(key=f"menu-content-{page_key}"):
-    {"Home": page_home, "Bible Study": page_bible_study, "Bible Library": page_library, "Vent": page_vent}[page]()
+if st.session_state.get("mobile_menu_open", True) or page == "Home":
+    with st.container(key="home-content"):
+        page_home()
+with st.container(key="page-content"):
+    if page != "Home":
+        with st.container(key=f"menu-content-{page_key}"):
+            {"Bible Study": page_bible_study, "Bible Library": page_library, "Vent": page_vent}[page]()
 
 st.html(
     f"""<script>
@@ -1338,75 +1440,10 @@ st.markdown(
 )
 
 st.html(
-    f"""<style>
-      #alai-install-button {{
-        background: #c5a15b; border: 1px solid #e3c77f; border-radius: 10px;
-        color: #14251d; cursor: pointer; display: block;
-        font: 700 .95rem 'DM Sans', sans-serif; min-height: 44px;
-        padding: .65rem 1rem; position: fixed;
-        right: max(18px, env(safe-area-inset-right)); top: 50%; width: auto;
-        z-index: 2147482000; box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
-        transform: translateY(-50%);
-        transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
-      }}
-      #alai-install-button:hover {{
-        background: #dfbd70; box-shadow: 0 10px 26px rgba(0, 0, 0, .42);
-        transform: translateY(calc(-50% - 2px));
-      }}
-      #alai-install-button:focus-visible {{ outline: 3px solid #f7d58f; outline-offset: 3px; }}
-      #alai-install-overlay {{
-        align-items: center; background: rgba(7, 15, 11, .72); display: flex;
-        inset: 0; justify-content: center; opacity: 0;
-        padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
-        position: fixed; transition: opacity .24s ease; z-index: 2147482001;
-      }}
-      #alai-install-overlay[hidden] {{ display: none; }}
-      #alai-install-overlay.is-visible {{ opacity: 1; }}
-      #alai-install-card {{
-        background: #1a3024; border: 1px solid #c5a15b; border-radius: 20px;
-        box-shadow: 0 18px 50px rgba(0, 0, 0, .48); box-sizing: border-box;
-        color: #f5f0e5; max-width: 25rem; padding: 1.5rem; text-align: center;
-        transform: scale(.96) translateY(8px); transition: transform .24s ease; width: 100%;
-      }}
-      #alai-install-overlay.is-visible #alai-install-card {{ transform: scale(1) translateY(0); }}
-      #alai-install-logo {{
-        border: 1px solid rgba(226, 190, 111, .8); border-radius: 50%;
-        display: block; height: 76px; margin: 0 auto .7rem; object-fit: cover; width: 76px;
-      }}
-      #alai-install-title {{ color: #f7d58f; font-size: 1.55rem; margin: 0 0 .35rem; }}
-      #alai-install-description {{ line-height: 1.55; margin: 0 0 .75rem; }}
-      #alai-install-status {{ color: #d6c8a8; font-size: .92rem; line-height: 1.45; min-height: 2.7em; }}
-      #alai-install-actions {{ display: flex; gap: .7rem; justify-content: center; margin-top: 1.1rem; }}
-      #alai-install-actions button {{
-        border-radius: 10px; cursor: pointer; font: 700 .95rem 'DM Sans', sans-serif;
-        min-height: 44px; padding: .65rem 1rem;
-      }}
-      #alai-install-confirm {{ background: #c5a15b; border: 1px solid #e3c77f; color: #14251d; }}
-      #alai-install-cancel {{ background: transparent; border: 1px solid #58705f; color: #f5f0e5; }}
-      #alai-install-actions button:focus-visible {{ outline: 3px solid #f7d58f; outline-offset: 3px; }}
-      @media (max-width: 480px) {{
-        #alai-install-card {{ border-radius: 17px; padding: 1.25rem 1rem; }}
-        #alai-install-actions {{ flex-direction: column; }}
-        #alai-install-actions button {{ width: 100%; }}
-      }}
-      @media (prefers-reduced-motion: reduce) {{ #alai-install-overlay, #alai-install-card {{ transition: none; }} }}
-    </style>
-    <div id="alai-install-overlay" hidden>
-      <section id="alai-install-card" role="dialog" aria-modal="true" aria-labelledby="alai-install-title">
-        <img id="alai-install-logo" src="/app/static/alai_icon_192.png" alt="Alai logo">
-        <h2 id="alai-install-title">Install Alai</h2>
-        <p id="alai-install-description">AI-powered Digital Bible</p>
-        <p id="alai-install-status" aria-live="polite">Add Alai to your home screen for quick access to Scripture and reflection.</p>
-        <div id="alai-install-actions">
-          <button id="alai-install-confirm" type="button">Add to Home Screen</button>
-          <button id="alai-install-cancel" type="button">Cancel</button>
-        </div>
-      </section>
-    </div>
-    <script>
-      (() => {{
-        if (window.__alaiPwaUiInitialized) return;
-        window.__alaiPwaUiInitialized = true;
+    """<script>
+      (() => {
+        if (window.__alaiPwaMetadataInitialized) return;
+        window.__alaiPwaMetadataInitialized = true;
 
         const manifestLink = document.createElement("link");
         manifestLink.rel = "manifest";
@@ -1414,11 +1451,11 @@ st.html(
         manifestLink.href = window.location.origin + "/manifest.webmanifest";
         document.head.appendChild(manifestLink);
 
-        if ("serviceWorker" in navigator && window.isSecureContext) {{
-          navigator.serviceWorker.register("/sw.js", {{ scope: "/" }}).catch((error) => {{
-            console.warn("Alai install support could not register its service worker.", error);
-          }});
-        }}
+        if ("serviceWorker" in navigator && window.isSecureContext) {
+          navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((error) => {
+            console.warn("Alai service worker registration failed.", error);
+          });
+        }
 
         const appleIcon = document.createElement("link");
         appleIcon.rel = "apple-touch-icon";
@@ -1429,107 +1466,7 @@ st.html(
         appleCapable.name = "apple-mobile-web-app-capable";
         appleCapable.content = "yes";
         document.head.appendChild(appleCapable);
-
-        const overlay = document.getElementById("alai-install-overlay");
-        const status = document.getElementById("alai-install-status");
-        const confirmButton = document.getElementById("alai-install-confirm");
-        const cancelButton = document.getElementById("alai-install-cancel");
-        if (!overlay || !status || !confirmButton || !cancelButton) return;
-
-        const installButton = document.createElement("button");
-        installButton.id = "alai-install-button";
-        installButton.type = "button";
-        installButton.textContent = "Install Alai";
-        installButton.setAttribute("aria-label", "Install Alai on this device");
-        document.body.appendChild(installButton);
-
-        const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-          || window.navigator.standalone === true;
-        const userAgent = window.navigator.userAgent || "";
-        const isIOS = /iPhone|iPad|iPod/i.test(userAgent)
-          || (/Macintosh/i.test(userAgent) && navigator.maxTouchPoints > 1);
-        const isFacebook = /FBAN|FBAV|FB_IAB|Messenger/i.test(userAgent);
-        const dismissalKey = "alai-install-dismissed-this-session";
-        let installPrompt = null;
-        let closeTimer = null;
-        if (isStandalone) installButton.hidden = true;
-
-        const sessionDismissed = () => {{
-          try {{ return window.sessionStorage.getItem(dismissalKey) === "1"; }} catch (_) {{ return false; }}
-        }};
-        const rememberDismissal = () => {{
-          try {{ window.sessionStorage.setItem(dismissalKey, "1"); }} catch (_) {{}}
-        }};
-        const browserInstructions = () => {{
-          if (isIOS) return "On iPhone or iPad, open Alai in Safari, tap Share, then choose Add to Home Screen.";
-          if (isFacebook) return "Open Alai in Chrome or your device browser first. Facebook's in-app browser cannot install it.";
-          if (/Android/i.test(userAgent)) return "This browser has not offered its install prompt. In Chrome, use Install app or Add to Home screen from the browser menu.";
-          return "This browser has not offered an install prompt. Use its Install app option if available, or keep using Alai here.";
-        }};
-        const showPopup = (ignoreSessionDismissal = false) => {{
-          if (isStandalone || (!ignoreSessionDismissal && sessionDismissed())) return;
-          if (closeTimer) window.clearTimeout(closeTimer);
-          overlay.hidden = false;
-          requestAnimationFrame(() => overlay.classList.add("is-visible"));
-          if (isIOS || isFacebook || !installPrompt) status.textContent = browserInstructions();
-          else status.textContent = "Alai is ready to install. Your browser will ask you to confirm.";
-        }};
-        const hidePopup = (remember = true) => {{
-          if (remember) rememberDismissal();
-          overlay.classList.remove("is-visible");
-          closeTimer = window.setTimeout(() => {{ overlay.hidden = true; }}, 250);
-        }};
-
-        installButton.addEventListener("click", () => showPopup(true));
-        cancelButton.addEventListener("click", () => hidePopup(true));
-        overlay.addEventListener("click", (event) => {{ if (event.target === overlay) hidePopup(true); }});
-        document.addEventListener("keydown", (event) => {{
-          if (event.key === "Escape" && !overlay.hidden) hidePopup(true);
-        }});
-
-        window.addEventListener("beforeinstallprompt", (event) => {{
-          event.preventDefault();
-          if (isIOS || isFacebook) {{
-            installPrompt = null;
-            if (!overlay.hidden) status.textContent = browserInstructions();
-            return;
-          }}
-          installPrompt = event;
-          if (!overlay.hidden) status.textContent = "Alai is ready to install. Your browser will ask you to confirm.";
-        }});
-        window.addEventListener("appinstalled", () => {{
-          installPrompt = null;
-          installButton.hidden = true;
-          status.textContent = "Alai is installed. You can open it from your home screen.";
-          confirmButton.hidden = true;
-          cancelButton.textContent = "Done";
-          if (overlay.hidden) showPopup(true);
-          window.setTimeout(() => hidePopup(true), 2200);
-        }});
-
-        confirmButton.addEventListener("click", async () => {{
-          if (!installPrompt) {{ status.textContent = browserInstructions(); return; }}
-          const promptEvent = installPrompt;
-          installPrompt = null;
-          try {{
-            await promptEvent.prompt();
-            const choice = await promptEvent.userChoice;
-            if (choice && choice.outcome === "accepted") {{
-              status.textContent = "Alai is being added. Your browser will confirm when it is ready.";
-              confirmButton.disabled = true;
-            }} else {{
-              status.textContent = "No problem. Alai is still available in your browser.";
-              hidePopup(true);
-            }}
-          }} catch (error) {{ status.textContent = browserInstructions(); }}
-        }});
-
-        const showAfterLoad = () => window.setTimeout(() => {{
-          if (!isStandalone && !sessionDismissed()) showPopup();
-        }}, 1100);
-        if (document.readyState === "complete") showAfterLoad();
-        else window.addEventListener("load", showAfterLoad, {{ once: true }});
-      }})();
+      })();
     </script>""",
     unsafe_allow_javascript=True,
 )
