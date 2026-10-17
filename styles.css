@@ -2658,6 +2658,16 @@ body::before {
   background-image: none !important;
 }
 
+/* Hide Streamlit's viewer/developer controls from the app canvas. */
+[data-testid="stToolbar"],
+[data-testid="stStatusWidget"],
+.stAppDeployButton,
+#MainMenu,
+footer {
+  display: none !important;
+  visibility: hidden !important;
+}
+
 /* Let the forest backdrop show through the app's content panels. */
 :root {
   --panel-glass: rgba(20, 37, 29, .42);

@@ -26,4 +26,4 @@ borderColor = "#47614F"
 enableStaticServing = true
 
 [client]
-toolbarMode = "minimal"
+toolbarMode = "viewer"
