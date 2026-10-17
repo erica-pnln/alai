@@ -2668,14 +2668,17 @@ body::before {
 .viewerBadge_link__1S137,
 .viewerBadge_text__1JaDK,
 .styles_viewerBadge__1yB5_,
-.css-1jc7ptx,
-.e1ewe7hr3,
 [aria-label="Manage app"],
 [title="Manage app"],
 #MainMenu,
-footer {
+footer:not(.app-footer) {
   display: none !important;
   visibility: hidden !important;
+}
+
+.app-footer {
+  display: block !important;
+  visibility: visible !important;
 }
 
 /* Let the forest backdrop show through the app's content panels. */
