@@ -2860,6 +2860,37 @@ div[data-testid="stDialog"] .kb-tilt {
   }
 }
 
+/* Add gentle mobile-only motion for scroll reveals and menu changes. */
+@media (max-width: 640px) {
+  .kb-anim section[data-testid="stMain"] .kb-reveal,
+  .kb-anim section[data-testid="stMain"] .kb-fade {
+    transition: opacity .42s ease-out, transform .48s cubic-bezier(.2, .8, .2, 1) !important;
+  }
+
+  .kb-anim section[data-testid="stMain"] .kb-reveal {
+    transform: translateY(16px);
+  }
+
+  .kb-anim section[data-testid="stMain"] .kb-reveal.kb-in {
+    transform: translateY(0);
+  }
+
+  section[data-testid="stMain"] [class*="st-key-menu-content-"] {
+    animation: alai-mobile-menu-enter .42s cubic-bezier(.2, .8, .2, 1) both;
+    will-change: opacity, transform;
+  }
+
+  body:has(.mobile-menu-state[data-state="open"]) section[data-testid="stMain"] .st-key-home-content {
+    animation: alai-mobile-menu-enter .42s cubic-bezier(.2, .8, .2, 1) both;
+    will-change: opacity, transform;
+  }
+
+  @keyframes alai-mobile-menu-enter {
+    from { opacity: 0; transform: translateX(14px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+}
+
 /* A restrained Scripture highlight that lets the botanical background show through. */
 .verse-of-day {
   border: 0 !important;
@@ -2906,9 +2937,61 @@ div[data-testid="stDialog"] .kb-tilt {
   }
 }
 
+/* Keep the verse actions visually clear of the verse text and its ornaments. */
+.st-key-home_verse_read,
+.st-key-home_verse_explore {
+  position: relative;
+  z-index: 1;
+  margin-top: .75rem;
+}
+
+.st-key-home_verse_read button,
+.st-key-home_verse_explore button {
+  position: relative;
+  z-index: 1;
+  min-height: 4rem;
+  box-shadow: inset 0 1px rgba(255, 249, 235, .08), 0 5px 14px rgba(0, 0, 0, .2) !important;
+}
+
+.st-key-home_verse_read button {
+  background: #203a2b !important;
+}
+
+.st-key-home_verse_explore button {
+  background: #c5a15b !important;
+  color: #17271e !important;
+}
+
+.verse-of-day-text {
+  line-height: 1.65 !important;
+  margin: 1rem 0 1.35rem !important;
+}
+
 @media (max-width: 640px) {
+  .st-key-home_verse_read,
+  .st-key-home_verse_explore {
+    margin-top: .5rem;
+  }
+
+  .st-key-home_verse_read button,
+  .st-key-home_verse_explore button {
+    min-height: 3.5rem;
+  }
+
   .scripture {
     font-size: calc(1.08rem + 2px) !important;
+  }
+
+  .scripture-card .card-heading {
+    font-size: calc(.98rem + 2px) !important;
+  }
+
+  .scripture-card .scripture-ref {
+    font-size: calc(1.28rem + 2px) !important;
+  }
+
+  .scripture-card .scripture-meta {
+    font-size: calc(.88rem + 2px) !important;
   }
 
   div[data-testid="stDialog"] [data-testid="stHorizontalBlock"] {
@@ -2933,6 +3016,61 @@ div[data-testid="stDialog"] .kb-tilt {
   div[data-testid="stDialog"] .st-key-library_fullscreen_close button {
     min-height: 2.6rem !important;
     margin-top: .35rem !important;
+  }
+
+  .st-key-library-fullscreen-close-row {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 2147483646 !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    height: 3.5rem !important;
+    margin: 0 0 -3.5rem !important;
+    padding: max(.5rem, env(safe-area-inset-top)) max(.5rem, env(safe-area-inset-right)) 0 0 !important;
+    overflow: visible !important;
+    pointer-events: none !important;
+  }
+
+  .st-key-library-fullscreen-close-row .st-key-library_fullscreen_close_icon {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    z-index: 2147483647 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 3rem !important;
+    margin-left: auto !important;
+    flex: 0 0 3rem !important;
+  }
+
+  .st-key-library-fullscreen-close-row .st-key-library_fullscreen_close_icon button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 3rem !important;
+    min-width: 3rem !important;
+    height: 3rem !important;
+    min-height: 3rem !important;
+    padding: 0 !important;
+    border: 1px solid #c5a15b !important;
+    border-radius: 50% !important;
+    background: #213a2c !important;
+    color: #fff8e9 !important;
+    font-size: 1.5rem !important;
+    line-height: 1 !important;
+    opacity: 1 !important;
+  }
+
+  .st-key-library-fullscreen-close-row .st-key-library_fullscreen_close_icon button p {
+    display: block !important;
+    margin: 0 !important;
+    color: inherit !important;
+    font-size: 1.5rem !important;
+    line-height: 1 !important;
   }
 }
 

@@ -685,14 +685,15 @@ def render_passage(passage_df, reference: str, testament: str):
 @st.dialog("\U0001f4d6 Original Scripture", width="large", dismissible=False)
 def render_fullscreen_passage(passage_df, reference: str, testament: str, verses, start: int):
     """Show the selected passage in a viewport-filling reading dialog."""
-    if st.button(
-        "\u2715",
-        key="library_fullscreen_close_icon",
-        help="Close full-screen reading",
-        type="tertiary",
-    ):
-        st.session_state["library_fullscreen_open"] = False
-        st.rerun()
+    with st.container(key="library-fullscreen-close-row"):
+        if st.button(
+            "\u2715",
+            key="library_fullscreen_close_icon",
+            help="Close full-screen reading",
+            type="tertiary",
+        ):
+            st.session_state["library_fullscreen_open"] = False
+            st.rerun()
     render_passage(passage_df, reference, testament)
     st.markdown('<div class="library-nav-label">\U0001f4da Continue Reading</div>', unsafe_allow_html=True)
     _render_library_reading_buttons(verses, start, key_prefix="library_fullscreen")
@@ -1408,6 +1409,7 @@ def render_mobile_menu():
 
 
 page = st.session_state["page"]
+mobile_menu_open = st.session_state.get("mobile_menu_open", True)
 render_mobile_menu()
 if page != "Home":
     with st.container(key="mobile-back-button"):
@@ -1433,6 +1435,74 @@ st.html(
     f"""<script>
     (() => {{
       const navigationId = {json.dumps(st.session_state.get("page_navigation_id", 0))};
+      const currentPage = {json.dumps(page)};
+      const mobileMenuOpen = {json.dumps(mobile_menu_open)};
+      const isMobile = () => window.matchMedia("(max-width: 640px)").matches;
+      const stateForPage = {{
+        ...((history.state && typeof history.state === "object") ? history.state : {{}}),
+        __alaiMobilePage: currentPage,
+        __alaiMobileMenuOpen: mobileMenuOpen,
+      }};
+
+      if (!window.__alaiMobileBackHandlerInstalled) {{
+        window.__alaiMobileBackHandlerInstalled = true;
+        window.addEventListener("popstate", (event) => {{
+          if (!isMobile()) return;
+          const dialog = document.querySelector('[data-testid="stDialog"] [role="dialog"]');
+          if (dialog) {{
+            const closeButton = dialog.querySelector(".st-key-library_fullscreen_close_icon button");
+            if (closeButton && window.__alaiMobileCurrentHistoryState) {{
+              history.pushState(window.__alaiMobileCurrentHistoryState, "", location.href);
+              closeButton.click();
+              return;
+            }}
+          }}
+          const previous = event.state;
+          if (!previous || !previous.__alaiMobilePage) return;
+
+          const targetPage = previous.__alaiMobilePage;
+          const targetMenuOpen = Boolean(previous.__alaiMobileMenuOpen);
+          const targetPageKey = targetPage.toLowerCase().replace(/ /g, "-");
+          const current = document.querySelector(".mobile-menu-state");
+          const currentPageName = current?.getAttribute("data-page") || "home";
+          const currentMenuOpen = current?.getAttribute("data-state") === "open";
+
+          if (targetPageKey === currentPageName && targetMenuOpen === currentMenuOpen) return;
+
+          window.__alaiMobileBackPending = true;
+          let button;
+          if (targetPage === "Home" && targetMenuOpen && currentPageName !== "home") {{
+            button = document.querySelector(".st-key-mobile_back_to_menu button");
+          }} else {{
+            const key = targetPage.toLowerCase().replace(/ /g, "_");
+            button = document.querySelector(`.st-key-sidebar_nav_${{key}} button`);
+          }}
+
+          if (button) {{
+            button.click();
+          }} else {{
+            window.__alaiMobileBackPending = false;
+          }}
+        }});
+      }}
+
+      if (isMobile()) {{
+        if (!window.__alaiMobileHistoryInitialized) {{
+          history.replaceState(stateForPage, "", location.href);
+          window.__alaiMobileHistoryInitialized = true;
+          window.__alaiLastHistoryNavigationId = navigationId;
+        }} else if (window.__alaiLastHistoryNavigationId !== navigationId) {{
+          if (window.__alaiMobileBackPending) {{
+            history.replaceState(stateForPage, "", location.href);
+            window.__alaiMobileBackPending = false;
+          }} else {{
+            history.pushState(stateForPage, "", location.href);
+          }}
+          window.__alaiLastHistoryNavigationId = navigationId;
+        }}
+        window.__alaiMobileCurrentHistoryState = stateForPage;
+      }}
+
       if (window.__alaiLastNavigationId === navigationId) return;
       window.__alaiLastNavigationId = navigationId;
       requestAnimationFrame(() => requestAnimationFrame(() => {{
@@ -1487,6 +1557,27 @@ st.html(
       }};
       requestAnimationFrame(() => requestAnimationFrame(scrollToPassage));
     }})();
+    </script>""",
+    unsafe_allow_javascript=True,
+)
+
+st.html(
+    """<script>
+    (() => {
+      if (window.__alaiFullscreenCloseCleanupInstalled) return;
+      window.__alaiFullscreenCloseCleanupInstalled = true;
+      const cleanup = () => {
+        const closeWidget = document.querySelector('.st-key-library_fullscreen_close_icon');
+        if (closeWidget) closeWidget.removeAttribute('style');
+        const legacyControl = document.querySelector('.alai-mobile-fullscreen-close');
+        if (legacyControl) legacyControl.style.setProperty('display', 'none', 'important');
+      };
+      new MutationObserver(() => requestAnimationFrame(cleanup)).observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+      cleanup();
+    })();
     </script>""",
     unsafe_allow_javascript=True,
 )
