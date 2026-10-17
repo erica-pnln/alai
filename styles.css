@@ -432,35 +432,7 @@ section[data-testid="stMain"] .mark-scroll-reveal.is-visible {
 
 /* Full-screen Scripture reading dialog */
 div[data-testid="stDialog"] {
-  overflow-y: auto !important;
   overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-div[data-testid="stDialog"] > div,
-div[data-testid="stDialog"] [role="dialog"] {
-  position: fixed !important;
-  inset: 0 !important;
-  width: 100vw !important;
-  max-width: 100vw !important;
-  height: 100dvh !important;
-  max-height: 100dvh !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-  background-color: #14251d !important;
-  background-image:
-    radial-gradient(ellipse at 12% 8%, rgba(61, 96, 66, .2), transparent 38%),
-    radial-gradient(ellipse at 88% 84%, rgba(197, 161, 91, .06), transparent 34%),
-    linear-gradient(135deg, #14251d 0%, #192d22 52%, #14251d 100%) !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-div[data-testid="stDialog"] [role="dialog"] {
-  display: block !important;
-}
-div[data-testid="stDialog"] [data-testid="stDialogContent"] {
-  max-height: none !important;
-  overflow: visible !important;
 }
 
 /* ---------- Jump-to-reference helper ---------- */
@@ -2660,21 +2632,6 @@ section[data-testid="stSidebar"] .stButton > button:focus-visible {
     overflow: hidden !important;
   }
 
-  div[data-testid="stDialog"] > div,
-  div[data-testid="stDialog"] [role="dialog"] {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    padding-bottom: env(safe-area-inset-bottom) !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
-  }
-
   div[data-testid="stDialog"] [data-testid="stDialogContent"] {
     max-width: 100% !important;
     overflow: visible !important;
@@ -2817,9 +2774,165 @@ section[data-testid="stSidebar"] {
   box-shadow: none !important;
 }
 
-div[data-testid="stDialog"] > div,
+div[data-testid="stDialog"] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10000 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  overflow: visible !important;
+  background: rgba(0, 0, 0, .72) !important;
+}
+
 div[data-testid="stDialog"] [role="dialog"] {
-  background: transparent !important;
-  background-image: none !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  display: block !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  padding-bottom: env(safe-area-inset-bottom) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  background-color: #14251d !important;
+  background-image:
+    radial-gradient(ellipse at 12% 8%, rgba(61, 96, 66, .2), transparent 38%),
+    linear-gradient(135deg, #14251d 0%, #192d22 52%, #14251d 100%) !important;
   box-shadow: none !important;
 }
+
+div[data-testid="stDialog"] [data-testid="stDialogContent"] {
+  max-width: 100% !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+div[data-testid="stDialog"] .scripture-card,
+div[data-testid="stDialog"] .mark-scroll-reveal,
+div[data-testid="stDialog"] .kb-reveal,
+div[data-testid="stDialog"] .kb-fade,
+div[data-testid="stDialog"] .kb-tilt {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (max-width: 640px) {
+  /* Put the mobile menu logo at the top edge instead of below Streamlit's
+     reserved header space. Keep the desktop spacing untouched. */
+  section[data-testid="stMain"] .main .block-container,
+  section[data-testid="stMain"] [data-testid="stMainBlockContainer"] {
+    padding-top: 0 !important;
+    padding-block-start: 0 !important;
+  }
+
+  .st-key-mobile-menu {
+    margin-top: 0 !important;
+    padding: max(.25rem, env(safe-area-inset-top)) .65rem 1rem !important;
+  }
+
+  .mobile-menu-header {
+    padding-top: 0 !important;
+    padding-bottom: .25rem !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .mobile-menu-intro {
+    margin-top: 0 !important;
+  }
+
+  div[data-testid="stDialog"] [role="dialog"] {
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  body:has(div[data-testid="stDialog"]) .st-key-mobile-back-button {
+    display: none !important;
+  }
+}
+
+/* A restrained Scripture highlight that lets the botanical background show through. */
+.verse-of-day {
+  border: 0 !important;
+  border-top: 1px solid rgba(197, 161, 91, .38) !important;
+  border-bottom: 1px solid rgba(197, 161, 91, .38) !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 1.2rem 1.35rem;
+}
+
+.verse-of-day-ref {
+  color: #d7b66d !important;
+  font-size: 1.45rem;
+}
+
+.verse-of-day-ref::after {
+  display: block;
+  width: 2.6rem;
+  height: 2px;
+  margin-top: .35rem;
+  background: #c5a15b;
+  content: "";
+}
+
+.verse-of-day-text {
+  color: #f5f0e5 !important;
+}
+
+.verse-of-day-meta {
+  color: #c5bda8 !important;
+  font-size: .82rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .verse-of-day {
+    padding: 1rem .75rem !important;
+  }
+
+  .verse-of-day-ref {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .scripture {
+    font-size: calc(1.08rem + 2px) !important;
+  }
+
+  div[data-testid="stDialog"] [data-testid="stHorizontalBlock"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: .45rem !important;
+  }
+
+  div[data-testid="stDialog"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    width: auto !important;
+    min-width: 0 !important;
+    flex: initial !important;
+  }
+
+  div[data-testid="stDialog"] [data-testid="stHorizontalBlock"] [data-testid="stButton"] > button {
+    min-height: 2.65rem !important;
+    padding: .35rem .3rem !important;
+    font-size: .82rem !important;
+    line-height: 1.15 !important;
+  }
+
+  div[data-testid="stDialog"] .st-key-library_fullscreen_close button {
+    min-height: 2.6rem !important;
+    margin-top: .35rem !important;
+  }
+}
+

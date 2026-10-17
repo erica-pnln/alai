@@ -16,7 +16,7 @@ OLD_TESTAMENT_BOOKS = {
 
 def make_empty_bible() -> pd.DataFrame:
     """Return the expected schema without inventing verse content."""
-    return pd.DataFrame(columns=REQUIRED_COLUMNS + ["translation"])
+    return pd.DataFrame(columns=REQUIRED_COLUMNS)
 
 
 def clean_bible(df: pd.DataFrame) -> pd.DataFrame:
@@ -29,8 +29,6 @@ def clean_bible(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["chapter", "verse"])
     df["chapter"] = df["chapter"].astype(int)
     df["verse"] = df["verse"].astype(int)
-    if "translation" not in df.columns:
-        df["translation"] = "KJV"
     if "testament" not in df.columns:
         df["testament"] = df["book"].apply(
             lambda book: "Old Testament" if book in OLD_TESTAMENT_BOOKS else "New Testament"
@@ -54,7 +52,7 @@ def load_bible():
         return make_empty_bible(), "missing", (
             "The Bible file (data/bible_verses.csv) was not found. "
             "No Scripture is displayed until you add a verified public-domain "
-            "KJV or WEB CSV."
+            "Bible CSV."
         )
     try:
         df = pd.read_csv(DATA_PATH)

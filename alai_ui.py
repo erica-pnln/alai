@@ -548,6 +548,7 @@ def move_library_verse(direction: int):
     st.session_state["library_start"] = target
     st.session_state["library_end"] = target
     st.session_state["library_notice"] = ""
+    st.session_state["library_reading_scroll_id"] = st.session_state.get("library_reading_scroll_id", 0) + 1
     if direction == 1 and st.session_state.get("library_tutorial_state_v3") == "go_to_verse":
         st.session_state["library_tutorial_state_v3"] = "completed"
     st.session_state["library_loading_message"] = "Opening selected verse…"
@@ -578,6 +579,7 @@ def move_library_chapter(direction: int):
     st.session_state["library_start"] = verses[0]
     st.session_state["library_end"] = verses[-1]
     st.session_state["library_notice"] = ""
+    st.session_state["library_reading_scroll_id"] = st.session_state.get("library_reading_scroll_id", 0) + 1
     st.session_state["library_loading_message"] = "Loading chapter…"
 
 
@@ -636,14 +638,22 @@ def _render_action_loading(
         st.markdown(markup, unsafe_allow_html=True)
 
 
-def _set_library_loading(message: str) -> None:
+def _set_library_loading(message: str, scroll_to_reading: bool = False) -> None:
     st.session_state["library_loading_message"] = message
+    if scroll_to_reading:
+        st.session_state["library_reading_scroll_id"] = (
+            st.session_state.get("library_reading_scroll_id", 0) + 1
+        )
     if message.startswith("Applying verse range") and st.session_state.get("library_tutorial_state_v3") == "select_verse":
         st.session_state["library_tutorial_state_v3"] = "go_to_verse"
 
 
-def _set_study_loading(message: str) -> None:
+def _set_study_loading(message: str, scroll_to_reading: bool = False) -> None:
     st.session_state["study_loading_message"] = message
+    if scroll_to_reading:
+        st.session_state["study_reading_scroll_id"] = (
+            st.session_state.get("study_reading_scroll_id", 0) + 1
+        )
 
 
 def _render_library_tutorial_hint(container) -> None:
@@ -658,7 +668,6 @@ def _render_library_tutorial_hint(container) -> None:
 
 def render_passage(passage_df, reference: str, testament: str):
     """Shows Scripture exactly as stored in the dataset (HTML-escaped only)."""
-    translation = passage_df["translation"].iloc[0]
     verses = "".join(
         f"<sup>{int(r.verse)}</sup>{html.escape(str(r.text))} " for r in passage_df.itertuples()
     )
@@ -666,7 +675,7 @@ def render_passage(passage_df, reference: str, testament: str):
         '<section class="scripture-card">'
         f'<div class="card-heading">\U0001f4d6 Original Scripture</div>'
         f'<div class="scripture-ref">{html.escape(reference)}</div>'
-        f'<div class="scripture-meta">{html.escape(testament)} \u00b7 {html.escape(str(translation))}</div>'
+        f'<div class="scripture-meta">{html.escape(testament)}</div>'
         f'<div class="scripture">{verses}</div>'
         '</section>',
         unsafe_allow_html=True,
@@ -779,12 +788,10 @@ def page_home():
         if row is None:
             st.info("No verse is available yet. Add a verified Bible CSV to see the daily verse.")
         else:
-            translation = str(row["translation"])
             st.markdown(
                 '<section class="verse-of-day">'
                 f'<div class="verse-of-day-ref">{html.escape(str(row["reference"]))}</div>'
                 f'<div class="verse-of-day-text">{html.escape(str(row["text"]))}</div>'
-                f'<div class="verse-of-day-meta">{html.escape(translation)}</div>'
                 '</section>',
                 unsafe_allow_html=True,
             )
@@ -905,6 +912,9 @@ def page_library():
                     st.session_state["library_start"] = start
                     st.session_state["library_end"] = end
                     st.session_state["library_notice"] = ""
+                    st.session_state["library_reading_scroll_id"] = (
+                        st.session_state.get("library_reading_scroll_id", 0) + 1
+                    )
                     st.session_state["library_loading_message"] = "Opening requested passage…"
                     opening_passage = True
                     _render_action_loading(
@@ -937,7 +947,7 @@ def page_library():
             st.session_state["library_book"] = books[0]
         book = cast(str, book_col.selectbox(
             "📚 Book", books, key="library_book",
-            on_change=_set_library_loading, args=("Loading selected book…",),
+            on_change=_set_library_loading, args=("Loading selected book…", True),
         ))
 
         chapters = get_chapters(df, book)
@@ -1185,6 +1195,9 @@ def page_bible_study():
                 st.session_state["study_start"] = selected_start
                 st.session_state["study_end"] = selected_end
                 st.session_state["study_notice"] = ""
+                st.session_state["study_reading_scroll_id"] = (
+                    st.session_state.get("study_reading_scroll_id", 0) + 1
+                )
                 st.session_state["study_loading_message"] = "Opening requested passage…"
                 opening_passage = True
                 _render_action_loading(
@@ -1228,7 +1241,7 @@ def page_bible_study():
         st.session_state["study_book"] = books[0]
     book = cast(str, book_col.selectbox(
         "📚 Book", books, key="study_book",
-        on_change=_set_study_loading, args=("Loading selected book…",),
+        on_change=_set_study_loading, args=("Loading selected book…", True),
     ))
 
     chapters = get_chapters(df, book)
@@ -1277,7 +1290,8 @@ def page_bible_study():
             overlay=True,
         )
     try:
-        render_passage(passage, reference, testament)
+        with st.container(key="study-scripture-area"):
+            render_passage(passage, reference, testament)
     finally:
         study_selection_loading.empty()
         st.session_state.pop("study_loading_message", None)
@@ -1426,6 +1440,52 @@ st.html(
         if (main) main.scrollTo({{ top: 0, left: 0, behavior: "auto" }});
         window.scrollTo({{ top: 0, left: 0, behavior: "auto" }});
       }}));
+    }})();
+    </script>""",
+    unsafe_allow_javascript=True,
+)
+
+st.html(
+    f"""<script>
+    (() => {{
+      const scrollId = {json.dumps(st.session_state.get("library_reading_scroll_id", 0))};
+      if (!scrollId || window.__alaiLibraryReadingScrollId === scrollId) return;
+      window.__alaiLibraryReadingScrollId = scrollId;
+      let attempts = 0;
+      const scrollToReading = () => {{
+        const dialog = document.querySelector('[data-testid="stDialog"] [role="dialog"]');
+        const readingArea = dialog
+          ? dialog.querySelector('.scripture-card')
+          : document.querySelector('.st-key-library-scripture-area .scripture-card');
+        if (dialog) dialog.scrollTo({{ top: 0, left: 0, behavior: "smooth" }});
+        if (readingArea) {{
+          readingArea.scrollIntoView({{ block: "start", behavior: "smooth" }});
+          return;
+        }}
+        if (++attempts < 10) window.setTimeout(scrollToReading, 100);
+      }};
+      requestAnimationFrame(() => requestAnimationFrame(scrollToReading));
+    }})();
+    </script>""",
+    unsafe_allow_javascript=True,
+)
+
+st.html(
+    f"""<script>
+    (() => {{
+      const scrollId = {json.dumps(st.session_state.get("study_reading_scroll_id", 0))};
+      if (!scrollId || window.__alaiStudyReadingScrollId === scrollId) return;
+      window.__alaiStudyReadingScrollId = scrollId;
+      let attempts = 0;
+      const scrollToPassage = () => {{
+        const passage = document.querySelector('.st-key-study-scripture-area .scripture-card');
+        if (passage) {{
+          passage.scrollIntoView({{ block: "start", behavior: "smooth" }});
+          return;
+        }}
+        if (++attempts < 10) window.setTimeout(scrollToPassage, 100);
+      }};
+      requestAnimationFrame(() => requestAnimationFrame(scrollToPassage));
     }})();
     </script>""",
     unsafe_allow_javascript=True,
